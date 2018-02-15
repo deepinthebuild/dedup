@@ -1,6 +1,6 @@
 use memchr::memchr;
 
-use config::{Options, Terminator};
+use args::{Options};
 use error::DedupError;
 
 use std::io;
@@ -25,24 +25,18 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
     }
 
     pub fn run(mut self) -> Result<u64, DedupError> {
-        let mut crlf = false;
-        let term = if let Terminator::Any(b) = self.opts.term {
-            b
-        } else {
-            crlf = true;
-            b'\n'
-        };
+        let delim = self.opts.delim;
         let mut count: u64 = 0;
-        while let Some(u) = memchr(term, self.buffer) {
+        while let Some(u) = memchr(delim, self.buffer) {
             let (mut ele, rest) = self.buffer.split_at(u);
-            if crlf {
+            if self.opts.crlf {
                 if let Some(&b'\r') = ele.last() {
                     ele = &ele[..ele.len() - 1];
                 }
             }
             if self.dup_store.insert(ele) {
-                self.out_stream.write_all(ele).unwrap();
-                self.out_stream.write_all(&[term]).unwrap();
+                self.out_stream.write_all(ele)?;
+                self.out_stream.write_all(&[delim])?;
             }
             self.buffer = &rest[1..];
             count += 1;

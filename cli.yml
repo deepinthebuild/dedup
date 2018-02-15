@@ -6,3 +6,15 @@ args:
   - INPUT:
       help: Specifies the input file to read from. Omit to read from stdin.
       index: 1
+  - OUTPUT:
+      short: o
+      long: output
+      takes_value: true
+      value_name: OUTPUT
+  - MMAP:
+      long: mmap
+      conflicts_with: NO_MMAP
+      takes_value: false
+  - NO_MMAP:
+      long: no-mmap
+      takes_value: false
