@@ -35,6 +35,18 @@ impl Default for Options {
     }
 }
 
+impl From<Args> for Options {
+    fn from(src: Args) -> Self {
+        Self::default()
+    }
+}
+
+impl<'a> From<&'a Args> for Options {
+    fn from(src: &'a Args) -> Self {
+        Self::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

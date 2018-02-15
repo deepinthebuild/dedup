@@ -10,17 +10,17 @@ use std::collections::HashSet;
 pub struct UnsortedBufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
-    out_stream: W,
+    out: W,
     dup_store: HashSet<&'a [u8]>,
 }
 
 impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
-    pub fn new<R: AsRef<[u8]>>(buffer: &'a R, out_stream: W) -> Self {
+    pub fn new<R: AsRef<[u8]>>(buffer: &'a R, output: W, opts: Options) -> Self {
         UnsortedBufferDeduper {
             buffer: buffer.as_ref(),
-            out_stream,
+            out: output,
             dup_store: Default::default(),
-            opts: Default::default(),
+            opts,
         }
     }
 
@@ -35,8 +35,8 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
                 }
             }
             if self.dup_store.insert(ele) {
-                self.out_stream.write_all(ele)?;
-                self.out_stream.write_all(&[delim])?;
+                self.out.write_all(ele)?;
+                self.out.write_all(&[delim])?;
             }
             self.buffer = &rest[1..];
             count += 1;
@@ -69,11 +69,11 @@ ham eggs
 ";
 
     #[test]
-    fn breakfast_dedup() {
+    fn buf_breakfast_dedup() {
         let mut output: Vec<u8> = Vec::new();
         {
-            let dedup = UnsortedBufferDeduper::new(&BREAKFAST, &mut output);
-            dedup.run();
+            let dedup = UnsortedBufferDeduper::new(&BREAKFAST, &mut output, Options::default());
+            dedup.run().unwrap();
         }
         assert_eq!(BREAKFAST_DEDUP, str::from_utf8(&output).unwrap());
     }
