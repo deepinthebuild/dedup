@@ -45,7 +45,7 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
     if args.mmap {
         let input = memmap_file(args.input.as_ref().unwrap())?;
         if let Some(ref p) = args.output {
-            let output = OpenOptions::new().write(true).open(p)?;
+            let output = OpenOptions::new().write(true).create(true).open(p)?;
             let output = BufWriter::new(output);
             let dedup = UnsortedBufferDeduper::new(&input, output, (&args).into());
             dedup.run()
@@ -58,7 +58,7 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
     } else {
         let input = read_file_to_vec(args.input.as_ref().unwrap())?;
         if let Some(ref p) = args.output {
-            let output = OpenOptions::new().write(true).open(p)?;
+            let output = OpenOptions::new().write(true).create(true).open(p)?;
             let output = BufWriter::new(output);
             let dedup = UnsortedBufferDeduper::new(&input, output, (&args).into());
             dedup.run()
