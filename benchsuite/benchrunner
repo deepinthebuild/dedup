@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+import os
+import subprocess
+import gzip
+import argparse
+import time
+import statistics
+
+TEST_DIR = 'corpus'
+BLOB_NAME = "europarl.txt"
+CORPUS_NAME_GZ = "en.raw.tar.gz"
+CORPUS_UNPACK_DIR = os.path.join("Europarl", "raw", "en")
+CORPUS_URL = "opus.nlpl.eu/download.php?f=Europarl/en.raw.tar.gz"
+
+class Benchmarker():
+    def __init__(self, name, warmup=1, count=5, commands=None):
+        self.name = name
+        self.warmup = warmup
+        self.count = count
+        self.commands = commands or []
+    
+    def run(self)
+        test_dir = os.path.join(os.getcwd(), TEST_DIR)
+        times = []
+        for _ in range(self.warmup):
+            subprocess.run(commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+
+        for _ in range(self.count):
+            start = time.time()
+            subprocess.run(commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+            end = time.time()
+            times.push(end - start)
+
+        return times
+
+def download_and_pack_corpus():
+    test_dir = os.path.join(os.getcwd(), TEST_DIR)
+    corpus_archive = os.path.join(test_dir, CORPUS_NAME_GZ)
+    corpus_unpacked = os.path.join(test_dir, CORPUS_UNPACK_DIR)
+    blob_location = os.path.join(test_dir, BLOB_NAME)
+
+    if not os.path.isdir(test_dir):
+        os.makedirs(test_dir)
+    if not os.path.exists(corpus_unpacked):
+        if not os.path.exists(CORPUS_NAME_GZ):
+            print("Downloading test corpus...")
+            subprocess.run(['curl', '-LO', CORPUS_URL], cwd=test_dir)
+        print("Unpacking test corpus...")
+        subprocess.run(['tar', '-xzf', CORPUS_NAME_GZ], cwd=test_dir)
+
+    if not os.path.exists(blob_location):
+        print("Concatenating files in to single blob...")
+        with open(blob_location, 'wb+') as f:
+            for entry in os.listdir(corpus_unpacked):
+                entry = os.path.join(corpus_unpacked, entry)
+                if os.path.isfile(entry):
+                    with gzip.open(entry, 'rb') as g:
+                        f.write(g.read())
+
+
+
+
+def main():
+    p = argparse.ArgumentParse("Command line deduplication tool benchmark runner.")
+    p.add_argument(
+        '--warmup', metavar='INTEGER', type=int, default=1,
+        help='The number of iterations to run each command before '
+        'the actual measurements begin.')
+    p.add_argument(
+        '--benches', metavar='INTEGER', type=int, default=5,
+        help='The number of samples to take when performing measurements.'
+    )
+    download_and_pack_corpus()
+
+    gnu_coreutils = Benchmarker("coreutils", commands = "sort {} | uniq".format(BLOB_NAME))
+    cjm_dedup = Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME))
+
+    gnu_results = gnu_coreutils.run()
+    dedup_results = cjm_dedup.run()
+
+    print("sort | uniq: {} mean: {}", gnu_results, statistics.mean(gnu_results))
+    print("dedup: {} mean: {}", dedup_results, statistics.mean(dedup_results))
+
+
+if __name__ == '__main__':
+    main()
