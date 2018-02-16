@@ -74,13 +74,15 @@ def main():
 
     gnu_coreutils = Benchmarker("coreutils", commands = "sort {} | uniq".format(BLOB_NAME))
     cjm_dedup = Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME))
+    awk = Benchmarker("awk", commands = "awk '!seen[$0]++' {}".format(BLOB_NAME))
 
     gnu_results = gnu_coreutils.run()
     dedup_results = cjm_dedup.run()
+    awk_results = awk.run()
 
     print("sort | uniq: {} mean: {}".format(gnu_results, statistics.mean(gnu_results)))
     print("dedup: {} mean: {}".format(dedup_results, statistics.mean(dedup_results)))
-
+    print("awk: {} mean: {}".format(awk_results, statistics.mean(awk_results)))
 
 if __name__ == '__main__':
     main()
