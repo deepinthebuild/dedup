@@ -7,3 +7,12 @@ authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 memchr = "2"
 memmap = "0.6.2"
 clap = {version = "~2.30", features = ["yaml"]}
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[[bin]]
+bench = false
+path = "src/main.rs"
+name = "dedup"
