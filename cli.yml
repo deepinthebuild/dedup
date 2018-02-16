@@ -13,6 +13,7 @@ args:
       value_name: OUTPUT
       use_delimiter: false
   - MMAP:
+      help: Enables use of memory mapped files. This is enabled by default.
       long: mmap
       conflicts_with: NO_MMAP
       takes_value: false
