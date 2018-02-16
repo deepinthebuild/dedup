@@ -16,11 +16,17 @@ impl Args {
         let yml = load_yaml!("../cli.yml");
         let m = App::from_yaml(yml).get_matches();
 
-        let input = m.value_of("INPUT").and_then(replace_with_stdout).map(PathBuf::from);
+        let input = m.value_of("INPUT")
+            .and_then(replace_with_stdout)
+            .map(PathBuf::from);
         let output = m.value_of("OUTPUT").map(PathBuf::from);
         let mmap = !m.is_present("NO_MMAP");
 
-        Ok(Args{input, output, mmap})
+        Ok(Args {
+            input,
+            output,
+            mmap,
+        })
     }
 }
 
@@ -31,7 +37,10 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Options{crlf: true, delim: b'\n'}
+        Options {
+            crlf: true,
+            delim: b'\n',
+        }
     }
 }
 
@@ -48,7 +57,11 @@ impl<'a> From<&'a Args> for Options {
 }
 
 fn replace_with_stdout(input: &str) -> Option<&str> {
-    if input == "-" { None } else {Some(input)}
+    if input == "-" {
+        None
+    } else {
+        Some(input)
+    }
 }
 
 #[cfg(test)]
@@ -57,9 +70,7 @@ mod tests {
     #[test]
     fn single_input_test() {
         let yml = load_yaml!("../cli.yml");
-        let m = App::from_yaml(yml).get_matches_from(vec![
-            "dedup", "inputfile",
-        ]);
+        let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile"]);
 
         assert_eq!(m.value_of("INPUT"), Some("inputfile"));
     }
@@ -67,9 +78,7 @@ mod tests {
     #[test]
     fn no_mmap_test() {
         let yml = load_yaml!("../cli.yml");
-        let m = App::from_yaml(yml).get_matches_from(vec![
-            "dedup", "inputfile", "--no-mmap"
-        ]);
+        let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile", "--no-mmap"]);
 
         assert!(m.is_present("NO_MMAP"));
     }
@@ -77,9 +86,8 @@ mod tests {
     #[test]
     fn input_output_test() {
         let yml = load_yaml!("../cli.yml");
-        let m = App::from_yaml(yml).get_matches_from(vec![
-            "dedup", "inputfile", "-o", "outputfile"
-        ]);
+        let m =
+            App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile", "-o", "outputfile"]);
 
         assert_eq!(m.value_of("OUTPUT"), Some("outputfile"));
     }
@@ -87,9 +95,8 @@ mod tests {
     #[test]
     fn output_input_test() {
         let yml = load_yaml!("../cli.yml");
-        let m = App::from_yaml(yml).get_matches_from(vec![
-            "dedup", "-o", "outputfile", "inputfile",
-        ]);
+        let m =
+            App::from_yaml(yml).get_matches_from(vec!["dedup", "-o", "outputfile", "inputfile"]);
 
         assert_eq!(m.value_of("OUTPUT"), Some("outputfile"));
     }

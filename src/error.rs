@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Display, Error, Formatter};
 use std::io;
 
-#[derive(Debug,)]
+#[derive(Debug)]
 pub enum DedupError {
     ClosedPipe,
     IO(io::Error),
@@ -11,15 +11,9 @@ pub enum DedupError {
 impl Display for DedupError {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match self {
-            &DedupError::ClosedPipe => {
-                write!(f, "A closed pipe was encountered")
-            },
-            &DedupError::Other => {
-                write!(f, "An unknown error has occurred")
-            },
-            &DedupError::IO(ref i) => {
-                write!(f, "{}", i)
-            }
+            &DedupError::ClosedPipe => write!(f, "A closed pipe was encountered"),
+            &DedupError::Other => write!(f, "An unknown error has occurred"),
+            &DedupError::IO(ref i) => write!(f, "{}", i),
         }
     }
 }

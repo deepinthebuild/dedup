@@ -1,6 +1,6 @@
 use memchr::memchr;
 
-use args::{Options};
+use args::Options;
 use error::DedupError;
 
 use std::io;

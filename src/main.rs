@@ -1,6 +1,7 @@
+#[macro_use]
+extern crate clap;
 extern crate memchr;
 extern crate memmap;
-#[macro_use] extern crate clap;
 
 use memmap::Mmap;
 
@@ -20,7 +21,6 @@ mod args;
 mod stream;
 
 fn main() {
-    
     match Args::parse().and_then(run) {
         Ok(_) => process::exit(0),
         Err(DedupError::ClosedPipe) => process::exit(0),
@@ -29,8 +29,6 @@ fn main() {
             process::exit(1);
         }
     };
-
-    
 }
 
 fn run(args: Args) -> Result<u64, DedupError> {
@@ -96,5 +94,5 @@ fn read_file_to_vec<T: AsRef<Path>>(target: T) -> Result<Vec<u8>, io::Error> {
 }
 fn memmap_file<T: AsRef<Path>>(target: T) -> Result<Mmap, io::Error> {
     let file = File::open(target)?;
-    unsafe {Mmap::map(&file)}
+    unsafe { Mmap::map(&file) }
 }

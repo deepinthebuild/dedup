@@ -4,7 +4,6 @@ use error::DedupError;
 use std::io;
 use std::collections::HashSet;
 
-
 pub struct UnsortedStreamDeduper<R: io::BufRead, W: io::Write> {
     input: R,
     opts: Options,
@@ -14,10 +13,12 @@ pub struct UnsortedStreamDeduper<R: io::BufRead, W: io::Write> {
 
 impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
     pub fn new(input: R, output: W, options: Options) -> Self {
-        UnsortedStreamDeduper{input,
-        opts: options,
-        out: output,
-        dup_store: Default::default()}
+        UnsortedStreamDeduper {
+            input,
+            opts: options,
+            out: output,
+            dup_store: Default::default(),
+        }
     }
 
     pub fn run(mut self) -> Result<u64, DedupError> {
@@ -27,7 +28,9 @@ impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
         loop {
             let mut buf = Vec::new();
             self.input.read_until(delim, &mut buf)?;
-            if buf.is_empty() {return Ok(count)}
+            if buf.is_empty() {
+                return Ok(count);
+            }
 
             buf.pop();
             if self.opts.crlf {
