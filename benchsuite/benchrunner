@@ -13,23 +13,23 @@ CORPUS_UNPACK_DIR = os.path.join("Europarl", "raw", "en")
 CORPUS_URL = "opus.nlpl.eu/download.php?f=Europarl/en.raw.tar.gz"
 
 class Benchmarker():
-    def __init__(self, name, warmup=1, count=5, commands=None):
+    def __init__(self, name, warmup=1, count=3, commands=None):
         self.name = name
         self.warmup = warmup
         self.count = count
         self.commands = commands or []
     
-    def run(self)
+    def run(self):
         test_dir = os.path.join(os.getcwd(), TEST_DIR)
         times = []
         for _ in range(self.warmup):
-            subprocess.run(commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
 
         for _ in range(self.count):
             start = time.time()
-            subprocess.run(commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
             end = time.time()
-            times.push(end - start)
+            times.append(end - start)
 
         return times
 
@@ -61,7 +61,7 @@ def download_and_pack_corpus():
 
 
 def main():
-    p = argparse.ArgumentParse("Command line deduplication tool benchmark runner.")
+    p = argparse.ArgumentParser("Command line deduplication tool benchmark runner.")
     p.add_argument(
         '--warmup', metavar='INTEGER', type=int, default=1,
         help='The number of iterations to run each command before '
@@ -78,8 +78,8 @@ def main():
     gnu_results = gnu_coreutils.run()
     dedup_results = cjm_dedup.run()
 
-    print("sort | uniq: {} mean: {}", gnu_results, statistics.mean(gnu_results))
-    print("dedup: {} mean: {}", dedup_results, statistics.mean(dedup_results))
+    print("sort | uniq: {} mean: {}".format(gnu_results, statistics.mean(gnu_results)))
+    print("dedup: {} mean: {}".format(dedup_results, statistics.mean(dedup_results)))
 
 
 if __name__ == '__main__':
