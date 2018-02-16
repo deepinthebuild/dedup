@@ -16,7 +16,7 @@ impl Args {
         let yml = load_yaml!("../cli.yml");
         let m = App::from_yaml(yml).get_matches();
 
-        let input = m.value_of("INPUT").map(PathBuf::from);
+        let input = m.value_of("INPUT").and_then(replace_with_stdout).map(PathBuf::from);
         let output = m.value_of("OUTPUT").map(PathBuf::from);
         let mmap = !m.is_present("NO_MMAP");
 
@@ -45,6 +45,10 @@ impl<'a> From<&'a Args> for Options {
     fn from(src: &'a Args) -> Self {
         Self::default()
     }
+}
+
+fn replace_with_stdout(input: &str) -> Option<&str> {
+    if input == "-" { None } else {Some(input)}
 }
 
 #[cfg(test)]

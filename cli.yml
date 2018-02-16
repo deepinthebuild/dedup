@@ -4,7 +4,7 @@ author: Chris McDonald <mail.chris.mcdonald@gmail.com>
 about: Deduplicates entries in file or stream
 args:
   - INPUT:
-      help: Specifies the input file to read from. Omit to read from stdin.
+      help: Specifies the input file to read from. Omit or supply '-' to read from stdin.
       index: 1
   - OUTPUT:
       short: o
