@@ -11,10 +11,17 @@ args:
       long: output
       takes_value: true
       value_name: OUTPUT
+      use_delimiter: false
   - MMAP:
       long: mmap
       conflicts_with: NO_MMAP
       takes_value: false
   - NO_MMAP:
+      help: Prohibits usage of memory mapped files. This will slow down the deduplication process significantly!
       long: no-mmap
       takes_value: false
+  - DELIMITER:
+        help: Specifies the byte pattern to separate entries by. Default is system-specified newline.
+        short: z
+        long: delimiter
+        takes_value: true

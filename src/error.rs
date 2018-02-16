@@ -4,6 +4,7 @@ use std::io;
 #[derive(Debug)]
 pub enum DedupError {
     ClosedPipe,
+    ArgumentParseError(String),
     IO(io::Error),
     Other,
 }
@@ -14,6 +15,7 @@ impl Display for DedupError {
             DedupError::ClosedPipe => write!(f, "A closed pipe was encountered"),
             DedupError::Other => write!(f, "An unknown error has occurred"),
             DedupError::IO(ref i) => write!(f, "{}", i),
+            DedupError::ArgumentParseError(ref s) => write!(f, "{}", s),
         }
     }
 }

@@ -9,6 +9,8 @@ pub struct Args {
     pub input: Option<PathBuf>,
     pub output: Option<PathBuf>,
     pub mmap: bool,
+    pub delim: u8,
+    pub crlf: bool,
 }
 
 impl Args {
@@ -21,11 +23,20 @@ impl Args {
             .map(PathBuf::from);
         let output = m.value_of("OUTPUT").map(PathBuf::from);
         let mmap = !m.is_present("NO_MMAP");
+        let delim = m.value_of("DELIMITER").map_or(Ok(b'\n'), parse_to_byte_literal)?;
+        #[cfg(windows)]
+        let mut crlf = true;
+        #[cfg(not(windows))]
+        let mut crlf= false;
+
+        crlf &= m.occurrences_of("DELIMITER") == 0;
 
         Ok(Args {
             input,
             output,
             mmap,
+            delim,
+            crlf,
         })
     }
 }
@@ -46,13 +57,33 @@ impl Default for Options {
 
 impl From<Args> for Options {
     fn from(src: Args) -> Self {
-        Self::default()
+        Options{delim: src.delim, crlf: src.crlf}
     }
 }
 
 impl<'a> From<&'a Args> for Options {
     fn from(src: &'a Args) -> Self {
-        Self::default()
+        Options{delim: src.delim, crlf: src.crlf}
+    }
+}
+
+fn parse_to_byte_literal(input: &str) -> Result<u8, DedupError> {
+    if input.len() == 1 {return Ok(input.as_bytes()[0])}
+    if input.len() > 2 {return Err(DedupError::ArgumentParseError(
+        format!("Invalid delimiter specified, only single byte characters are permitted. Found: {}", input)
+    ))}
+
+    let bytes = input.as_bytes();
+    match (bytes[0], bytes[1]) {
+        (b'\\', b'n') => Ok(b'\n'),
+        (b'\\', b't') => Ok(b'\t'),
+        (b'\\', b'0') => Ok(b'\0'),
+        (b'\\', b'\\') => Ok(b'\\'),
+        (b'\\', b'\'') => Ok(b'\''),
+        (b'\\', b'"') => Ok(b'\"'),
+        (_, _) => Err(DedupError::ArgumentParseError(
+            format!("Invalid delimiter specified, only single byte characters are permitted. Found: {}", input)
+        )),
     }
 }
 
@@ -99,5 +130,25 @@ mod tests {
             App::from_yaml(yml).get_matches_from(vec!["dedup", "-o", "outputfile", "inputfile"]);
 
         assert_eq!(m.value_of("OUTPUT"), Some("outputfile"));
+    }
+
+    #[test]
+    fn specify_delim_test() {
+        let yml = load_yaml!("../cli.yml");
+        let m =
+            App::from_yaml(yml).get_matches_from(vec!["dedup", "-z", "\\t", "inputfile"]);
+
+        assert!(m.is_present("DELIMITER"));
+        assert_eq!(parse_to_byte_literal(m.value_of("DELIMITER").unwrap()).unwrap(),
+         b'\t');
+    }
+
+    #[test]
+    fn unspecified_delim_test() {
+        let yml = load_yaml!("../cli.yml");
+        let m =
+            App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile"]);
+
+        assert!(!m.is_present("DELIMITER"));
     }
 }
