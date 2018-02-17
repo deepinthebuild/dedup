@@ -4,7 +4,7 @@ import subprocess
 import gzip
 import argparse
 import time
-import statistics
+from statistics import mean, median
 
 TEST_DIR = 'corpus'
 BLOB_NAME = "europarl.txt"
@@ -23,11 +23,11 @@ class Benchmarker():
         test_dir = os.path.join(os.getcwd(), TEST_DIR)
         times = []
         for _ in range(self.warmup):
-            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL)
 
         for _ in range(self.count):
             start = time.time()
-            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL)
             end = time.time()
             times.append(end - start)
 
@@ -67,22 +67,35 @@ def main():
         help='The number of iterations to run each command before '
         'the actual measurements begin.')
     p.add_argument(
-        '--benches', metavar='INTEGER', type=int, default=5,
+        '--benches', metavar='INTEGER', type=int, default=3,
         help='The number of samples to take when performing measurements.'
     )
+    p.add_argument(
+        '--run', metavar='TESTNAME', choices=["awk", "dedup", "sort", "all"], nargs='?', default="all"
+    )
+    args = p.parse_args()
+
     download_and_pack_corpus()
 
-    gnu_coreutils = Benchmarker("coreutils", commands = "sort {} | uniq".format(BLOB_NAME))
-    cjm_dedup = Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME))
-    awk = Benchmarker("awk", commands = "awk '!seen[$0]++' {}".format(BLOB_NAME))
+    bench_count = args.benches
+    warmup_rounds = args.warmup
 
-    gnu_results = gnu_coreutils.run()
-    dedup_results = cjm_dedup.run()
-    awk_results = awk.run()
+    benches = {
+    "sort" : Benchmarker("sort", commands = "sort -u {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count),
+    "dedup" : Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count),
+    "awk" : Benchmarker("awk", commands = "awk '!seen[$0]++' {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count)
+    }
 
-    print("sort | uniq: {} mean: {}".format(gnu_results, statistics.mean(gnu_results)))
-    print("dedup: {} mean: {}".format(dedup_results, statistics.mean(dedup_results)))
-    print("awk: {} mean: {}".format(awk_results, statistics.mean(awk_results)))
+    if args.run == "all":
+        results = [(n, b.run()) for n, b in benches.items()]
+        for testname, result in results :
+            print("{} : mean: {:.4} median: {:.4}".format(testname, mean(result), median(result)))
+    else:
+        testname = args.run
+        bench = benches[testname]
+        result = bench.run()
+        print("{} : mean: {:.4} median: {:.4}".format(testname, mean(result), median(result)))
+
 
 if __name__ == '__main__':
     main()
