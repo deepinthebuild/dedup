@@ -1,14 +1,19 @@
+use seahash::SeaHasher;
+
 use args::Options;
 use error::DedupError;
 
 use std::io;
 use std::collections::HashSet;
+use std::hash::BuildHasherDefault;
+
+type SeaHashSet<T> = HashSet<T, BuildHasherDefault<SeaHasher>>;
 
 pub struct UnsortedStreamDeduper<R: io::BufRead, W: io::Write> {
     input: R,
     opts: Options,
     out: W,
-    dup_store: HashSet<Vec<u8>>,
+    dup_store: SeaHashSet<Vec<u8>>,
 }
 
 impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
@@ -17,7 +22,7 @@ impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
             input,
             opts: options,
             out: output,
-            dup_store: Default::default(),
+            dup_store: SeaHashSet::with_capacity_and_hasher(128, Default::default()),
         }
     }
 

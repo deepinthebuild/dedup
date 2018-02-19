@@ -1,4 +1,5 @@
 use memchr::memchr;
+use seahash::SeaHasher;
 
 use args::Options;
 use error::DedupError;
@@ -6,12 +7,15 @@ use error::DedupError;
 use std::io;
 use std::default::Default;
 use std::collections::HashSet;
+use std::hash::BuildHasherDefault;
+
+type SeaHashSet<T> = HashSet<T, BuildHasherDefault<SeaHasher>>;
 
 pub struct UnsortedBufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
     out: W,
-    dup_store: HashSet<&'a [u8]>,
+    dup_store: SeaHashSet<&'a [u8]>,
 }
 
 impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
@@ -19,7 +23,7 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
         UnsortedBufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
-            dup_store: Default::default(),
+            dup_store: SeaHashSet::with_capacity_and_hasher(buffer.as_ref().len() / 50, Default::default()),
             opts,
         }
     }

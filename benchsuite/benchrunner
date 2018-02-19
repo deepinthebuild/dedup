@@ -71,6 +71,9 @@ def main():
         help='The number of samples to take when performing measurements.'
     )
     p.add_argument(
+        '--sortpath', metavar='SORTPATH', default='sort'
+    )
+    p.add_argument(
         '--run', metavar='TESTNAME', choices=["awk", "dedup", "sort", "all"], nargs='?', default="all"
     )
     args = p.parse_args()
@@ -81,7 +84,7 @@ def main():
     warmup_rounds = args.warmup
 
     benches = {
-    "sort" : Benchmarker("sort", commands = "sort -u {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count),
+    "sort" : Benchmarker("sort", commands = "{sort} -u {target}".format(sort=args.sortpath, target=BLOB_NAME), warmup=warmup_rounds, count=bench_count),
     "dedup" : Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count),
     "awk" : Benchmarker("awk", commands = "awk '!seen[$0]++' {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count)
     }

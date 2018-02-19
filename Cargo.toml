@@ -4,9 +4,10 @@ version = "0.1.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 
 [dependencies]
-memchr = "2"
-memmap = "0.6.2"
+memchr = "~2"
+memmap = "~0.6.2"
 clap = {version = "~2.30", features = ["yaml"]}
+seahash = "~3.0.5"
 
 [profile.release]
 opt-level = 3
