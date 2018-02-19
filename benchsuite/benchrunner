@@ -1,52 +1,61 @@
 #!/usr/bin/env python3
+
+# This file must live in dedup/benchsuite! The file may be run from anywhere, but the script itself must reside in this subdirectory.
+
 import os
 import subprocess
 import gzip
 import argparse
 import time
+import platform
+import shutil
+
+from operator import itemgetter
 from statistics import mean, median
 
-TEST_DIR = 'corpus'
+BENCH_FILE_PATH = os.path.abspath(__file__)
+BENCH_DIR = os.path.dirname(BENCH_FILE_PATH)
+TEST_DIR =  "corpustest"
 BLOB_NAME = "europarl.txt"
 CORPUS_NAME_GZ = "en.raw.tar.gz"
 CORPUS_UNPACK_DIR = os.path.join("Europarl", "raw", "en")
 CORPUS_URL = "opus.nlpl.eu/download.php?f=Europarl/en.raw.tar.gz"
+DEDUP_BIN_NAME = "dedup" + (".exe" if platform.system() == 'Windows' else "")
 
 class Benchmarker():
-    def __init__(self, name, warmup=1, count=3, commands=None):
+    def __init__(self, name, warmup=1, count=3, commands=None, directory=None):
         self.name = name
         self.warmup = warmup
         self.count = count
         self.commands = commands or []
+        self.directory = directory
     
     def run(self):
-        test_dir = os.path.join(os.getcwd(), TEST_DIR)
         times = []
         for _ in range(self.warmup):
-            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL)
+            subprocess.run(self.commands, cwd=self.directory, stdout=subprocess.DEVNULL)
 
         for _ in range(self.count):
             start = time.time()
-            subprocess.run(self.commands, cwd=test_dir, stdout=subprocess.DEVNULL)
+            subprocess.run(self.commands, cwd=self.directory, stdout=subprocess.DEVNULL)
             end = time.time()
             times.append(end - start)
 
         return times
 
-def download_and_pack_corpus():
-    test_dir = os.path.join(os.getcwd(), TEST_DIR)
-    corpus_archive = os.path.join(test_dir, CORPUS_NAME_GZ)
-    corpus_unpacked = os.path.join(test_dir, CORPUS_UNPACK_DIR)
-    blob_location = os.path.join(test_dir, BLOB_NAME)
+def download_and_pack_corpus(directory):
+    corpus_archive = os.path.join(directory, CORPUS_NAME_GZ)
+    corpus_unpacked = os.path.join(directory, CORPUS_UNPACK_DIR)
+    blob_location = os.path.join(directory, BLOB_NAME)
 
-    if not os.path.isdir(test_dir):
-        os.makedirs(test_dir)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     if not os.path.exists(corpus_unpacked):
         if not os.path.exists(CORPUS_NAME_GZ):
             print("Downloading test corpus...")
-            subprocess.run(['curl', '-LO', CORPUS_URL], cwd=test_dir)
+            subprocess.run(['curl', '-LO', CORPUS_URL], cwd=directory)
         print("Unpacking test corpus...")
-        subprocess.run(['tar', '-xzf', CORPUS_NAME_GZ], cwd=test_dir)
+        subprocess.run(['tar', '-xzf', CORPUS_NAME_GZ], cwd=directory)
 
     if not os.path.exists(blob_location):
         print("Concatenating files in to single blob...")
@@ -57,8 +66,15 @@ def download_and_pack_corpus():
                     with gzip.open(entry, 'rb') as g:
                         f.write(g.read())
 
+def build_dedup():
+    print("Building dedup...")
+    proj_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+    subprocess.run(['cargo', 'build', '--release'], cwd=proj_path)
 
-
+def move_dedup_to_test_dir(todir):
+    proj_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+    bin_path = os.path.join(proj_path, "target", "release", DEDUP_BIN_NAME)
+    shutil.copyfile(bin_path, os.path.join(todir, DEDUP_BIN_NAME))
 
 def main():
     p = argparse.ArgumentParser("Command line deduplication tool benchmark runner.")
@@ -76,22 +92,33 @@ def main():
     p.add_argument(
         '--run', metavar='TESTNAME', choices=["awk", "dedup", "sort", "all"], nargs='?', default="all"
     )
+    p.add_argument(
+        '--dir', metavar='TESTDIR', default=BENCH_DIR
+    )
     args = p.parse_args()
 
-    download_and_pack_corpus()
+    config = dict()
+    config["count"] = args.benches
+    config["warmup"] = args.warmup
+    config["directory"] = os.path.join(args.dir, TEST_DIR)
 
-    bench_count = args.benches
-    warmup_rounds = args.warmup
+    download_and_pack_corpus(config["directory"])
+
+    if args.run in ["all", "dedup"]:
+        build_dedup()
+        move_dedup_to_test_dir(config["directory"])
+
+    BLOB_PATH = os.path.join(config["directory"], BLOB_NAME)
 
     benches = {
-    "sort" : Benchmarker("sort", commands = "{sort} -u {target}".format(sort=args.sortpath, target=BLOB_NAME), warmup=warmup_rounds, count=bench_count),
-    "dedup" : Benchmarker("dedup", commands = "dedup {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count),
-    "awk" : Benchmarker("awk", commands = "awk '!seen[$0]++' {}".format(BLOB_NAME), warmup=warmup_rounds, count=bench_count)
+    "sort" : Benchmarker("sort", commands = [args.sortpath, '-u', BLOB_PATH], **config),
+    "dedup" : Benchmarker("dedup", commands = ['dedup', BLOB_PATH], **config),
+    "awk" : Benchmarker("awk", commands = ['awk', '!seen[$0]++', BLOB_PATH], **config)
     }
 
     if args.run == "all":
         results = [(n, b.run()) for n, b in benches.items()]
-        for testname, result in results :
+        for testname, result in sorted(results, key=itemgetter(0)) :
             print("{} : mean: {:.4} median: {:.4}".format(testname, mean(result), median(result)))
     else:
         testname = args.run

@@ -3,5 +3,5 @@
 **/*.rs.bk
 /.vscode
 
-/benchsuite/corpus
-/benchsuite/corpus/*
+/benchsuite/corpustest
+/benchsuite/corpustest/*
