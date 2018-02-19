@@ -15,12 +15,16 @@ from statistics import mean, median
 
 BENCH_FILE_PATH = os.path.abspath(__file__)
 BENCH_DIR = os.path.dirname(BENCH_FILE_PATH)
+PROJECT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+
 TEST_DIR =  "corpustest"
 BLOB_NAME = "europarl.txt"
 CORPUS_NAME_GZ = "en.raw.tar.gz"
 CORPUS_UNPACK_DIR = os.path.join("Europarl", "raw", "en")
 CORPUS_URL = "opus.nlpl.eu/download.php?f=Europarl/en.raw.tar.gz"
+
 DEDUP_BIN_NAME = "dedup" + (".exe" if platform.system() == 'Windows' else "")
+DEDUP_BIN_PATH = os.path.join(PROJECT_PATH, "target", "release", DEDUP_BIN_NAME)
 
 class Benchmarker():
     def __init__(self, name, warmup=1, count=3, commands=None, directory=None):
@@ -71,10 +75,6 @@ def build_dedup():
     proj_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
     subprocess.run(['cargo', 'build', '--release'], cwd=proj_path)
 
-def move_dedup_to_test_dir(todir):
-    proj_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-    bin_path = os.path.join(proj_path, "target", "release", DEDUP_BIN_NAME)
-    shutil.copyfile(bin_path, os.path.join(todir, DEDUP_BIN_NAME))
 
 def main():
     p = argparse.ArgumentParser("Command line deduplication tool benchmark runner.")
@@ -106,13 +106,12 @@ def main():
 
     if args.run in ["all", "dedup"]:
         build_dedup()
-        move_dedup_to_test_dir(config["directory"])
 
     BLOB_PATH = os.path.join(config["directory"], BLOB_NAME)
 
     benches = {
     "sort" : Benchmarker("sort", commands = [args.sortpath, '-u', BLOB_PATH], **config),
-    "dedup" : Benchmarker("dedup", commands = ['dedup', BLOB_PATH], **config),
+    "dedup" : Benchmarker("dedup", commands = [DEDUP_BIN_PATH, BLOB_PATH], **config),
     "awk" : Benchmarker("awk", commands = ['awk', '!seen[$0]++', BLOB_PATH], **config)
     }
 
