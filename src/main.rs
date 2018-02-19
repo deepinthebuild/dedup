@@ -4,6 +4,10 @@ extern crate memchr;
 extern crate memmap;
 extern crate fxhash;
 extern crate fastchr;
+extern crate rayon;
+extern crate lumpy_chunks;
+extern crate seahash;
+
 
 use memmap::Mmap;
 
@@ -25,8 +29,8 @@ mod set;
 
 fn main() {
     match Args::parse().and_then(run) {
-        Ok(_) => process::exit(0),
-        Err(DedupError::ClosedPipe) => process::exit(0),
+        Ok(Some(n)) => println!("{}", n),
+        Err(DedupError::ClosedPipe) | Ok(None) => process::exit(0),
         Err(u) => {
             eprintln!("{}", u);
             process::exit(1);
@@ -34,7 +38,7 @@ fn main() {
     };
 }
 
-fn run(args: Args) -> Result<u64, DedupError> {
+fn run(args: Args) -> Result<Option<u64>, DedupError> {
     if args.input.is_some() {
         run_on_file(args)
     } else {
@@ -42,7 +46,7 @@ fn run(args: Args) -> Result<u64, DedupError> {
     }
 }
 
-fn run_on_file(args: Args) -> Result<u64, DedupError> {
+fn run_on_file(args: Args) -> Result<Option<u64>, DedupError> {
     if args.mmap {
         let input = memmap_file(args.input.as_ref().unwrap())?;
         if let Some(ref p) = args.output {
@@ -72,7 +76,7 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
     }
 }
 
-fn run_on_stdin(args: Args) -> Result<u64, DedupError> {
+fn run_on_stdin(args: Args) -> Result<Option<u64>, DedupError> {
     let _input = io::stdin();
     let input = _input.lock();
 

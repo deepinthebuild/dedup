@@ -1,6 +1,6 @@
 [package]
 name = "dedup"
-version = "0.2.0"
+version = "0.2.0-gumshoe"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 repository = "https://github.com/cjm00/dedup"
 homepage = "https://github.com/cjm00/dedup"
@@ -20,7 +20,10 @@ memchr = "~2"
 memmap = "~0.6.2"
 clap = { version = "~2.30", features = ["yaml"] }
 fxhash = "0.2.1"
-fastchr = { version = "0.2", path = "./fastchr", optional = true }
+fastchr = { version = "0.2", path = "fastchr", optional = true }
+lumpy_chunks = { version = "0.1", path = "lumpy_chunks" }
+rayon = "1.0.0"
+seahash = "3.0.5"
 
 [profile.release]
 opt-level = 3
@@ -37,4 +40,4 @@ default = ["simd-accel"]
 simd-accel = ["fastchr"]
 
 [workspace]
-members = ["fastchr"]
+members = ["fastchr", "lumpy_chunks", "poirot"]

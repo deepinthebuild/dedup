@@ -15,6 +15,65 @@ use std::arch::x86::_mm_movemask_epi8 as movemask;
 
 use std::mem;
 
+#[derive(Debug, Clone)]
+pub struct Fastchr<'a> {
+    needle: u8,
+    haystack: &'a [u8],
+    position: usize,
+}
+
+impl<'a> Fastchr<'a> {
+    pub fn new(needle: u8, haystack: &'a [u8]) -> Self {
+        Fastchr{
+            needle,
+            haystack,
+            position: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for Fastchr<'a> {
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        fastchr(self.needle, self.haystack).map(
+            move |new_index| {
+                self.haystack = self.haystack.split_at(new_index + 1).1;
+                let found_pos = self.position + new_index;
+                self.position = found_pos + 1;
+                found_pos
+            }
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FastchrSplit<'a> {
+    needle: u8,
+    haystack: &'a [u8],
+}
+
+impl<'a> FastchrSplit<'a> {
+    pub fn new(needle: u8, haystack: &'a [u8]) -> Self {
+        FastchrSplit{
+            needle,
+            haystack,
+        }
+    }
+}
+
+impl<'a> Iterator for FastchrSplit<'a> {
+    type Item = &'a [u8];
+    fn next(&mut self) -> Option<Self::Item> {
+        fastchr(self.needle, self.haystack).map(
+            move |new_index| {
+                let (split, haystack) = self.haystack.split_at(new_index + 1);
+                self.haystack = haystack;
+                split
+            }
+        )
+    }
+}
+
 #[inline]
 pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     let mut iter = haystack.simd_iter();

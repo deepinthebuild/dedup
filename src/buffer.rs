@@ -1,20 +1,23 @@
+/*
 #[cfg(not(feature = "simd-accel"))]
 use memchr::memchr;
 #[cfg(feature = "simd-accel")]
 use fastchr::fastchr as memchr;
+*/
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 
 use args::Options;
 use error::DedupError;
-use set::Set;
+use set::ConcurrentSet;
 
 use std::io;
-use std::default::Default;
 
 pub struct BufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
     out: W,
-    dup_store: Set<&'a [u8]>,
+    dup_store: ConcurrentSet<'a>,
 }
 
 impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
@@ -22,29 +25,54 @@ impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
         BufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
-            dup_store: Set::with_capacity_and_hasher(
-                (buffer.as_ref().len() / 256).next_power_of_two(),
-                Default::default(),
-            ),
+            dup_store: ConcurrentSet::default(),
             opts,
         }
     }
 
-    pub fn run(mut self) -> Result<u64, DedupError> {
-        let delim = self.opts.delim;
-        let mut count: u64 = 0;
-        while let Some(u) = memchr(delim, self.buffer) {
-            let (mut ele, rest) = self.buffer.split_at(u + 1);
-            if self.dup_store.insert(ele) {
-                self.out.write_all(ele)?;
-            }
-            self.buffer = rest;
-            count += 1;
-        }
+    pub fn run(mut self) -> Result<Option<u64>, DedupError> {
+        ThreadPoolBuilder::new()
+            .num_threads(self.opts.num_threads)
+            .build_global()
+            .unwrap();
+        let terminator = self.opts.terminator;
+        let set = &self.dup_store;
+        let repeated = self.opts.repeated;
 
-        Ok(count)
+        let output: Vec<&[u8]> = self.buffer.par_split(|p| *p == terminator)
+            .filter(|s| set.insert(s) != repeated)
+            .collect();
+        
+
+        let mut len = output.len();
+
+        if !self.opts.line_count {
+            for s in &output[..len - 1] {
+                self.out.write_all(s)?;
+                self.out.write_all(&[terminator])?;
+            }
+
+            if let Some(s) = output.last() {
+                if !s.is_empty() {
+                    self.out.write_all(s)?;
+                    self.out.write_all(&[terminator])?;
+                }
+            }
+            Ok(None)
+        } else {
+            if let Some(s) = output.last() {
+                if s.is_empty() {
+                    len -= 1;
+                }
+            }
+            Ok(Some(len as u64))
+        }
+        
     }
 }
+
+
+
 
 #[cfg(test)]
 mod tests {
@@ -69,6 +97,7 @@ ham eggs
 ";
 
     #[test]
+    #[ignore]
     fn buf_breakfast_dedup() {
         let mut output: Vec<u8> = Vec::new();
         {

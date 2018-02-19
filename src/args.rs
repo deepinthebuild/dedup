@@ -9,7 +9,8 @@ pub struct Args {
     pub input: Option<PathBuf>,
     pub output: Option<PathBuf>,
     pub mmap: bool,
-    pub delim: u8,
+    pub terminator: u8,
+    pub line_count: bool,
 }
 
 impl Args {
@@ -22,26 +23,34 @@ impl Args {
             .map(PathBuf::from);
         let output = m.value_of("OUTPUT").map(PathBuf::from);
         let mmap = !m.is_present("NO_MMAP");
-        let delim = m.value_of("DELIMITER")
+        let terminator = m.value_of("TERMINATOR")
             .map_or(Ok(b'\n'), parse_to_byte_literal)?;
+        let line_count = m.is_present("COUNTLINES");
         
         Ok(Args {
             input,
             output,
             mmap,
-            delim,
+            terminator,
+            line_count
         })
     }
 }
 
 pub struct Options {
-    pub delim: u8,
+    pub terminator: u8,
+    pub num_threads: usize,
+    pub line_count: bool,
+    pub repeated: bool,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
-            delim: b'\n',
+            terminator: b'\n',
+            num_threads: 0,
+            line_count: false,
+            repeated: false,
         }
     }
 }
@@ -49,7 +58,10 @@ impl Default for Options {
 impl From<Args> for Options {
     fn from(src: Args) -> Self {
         Options {
-            delim: src.delim,
+            terminator: src.terminator,
+            num_threads: 0,
+            line_count: src.line_count,
+            repeated: false,
         }
     }
 }
@@ -57,7 +69,10 @@ impl From<Args> for Options {
 impl<'a> From<&'a Args> for Options {
     fn from(src: &'a Args) -> Self {
         Options {
-            delim: src.delim,
+            terminator: src.terminator,
+            num_threads: 0,
+            line_count: src.line_count,
+            repeated: false,
         }
     }
 }
@@ -134,22 +149,28 @@ mod tests {
     }
 
     #[test]
-    fn specify_delim_test() {
+    fn specify_terminator_test() {
         let yml = load_yaml!("../cli.yml");
-        let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "-z", "\\t", "inputfile"]);
+        let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "--terminator", "\\t", "inputfile"]);
 
-        assert!(m.is_present("DELIMITER"));
+        assert!(m.is_present("TERMINATOR"));
         assert_eq!(
-            parse_to_byte_literal(m.value_of("DELIMITER").unwrap()).unwrap(),
+            parse_to_byte_literal(m.value_of("TERMINATOR").unwrap()).unwrap(),
             b'\t'
         );
     }
 
     #[test]
-    fn unspecified_delim_test() {
+    fn unspecified_terminator_test() {
         let yml = load_yaml!("../cli.yml");
         let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile"]);
+        assert_eq!(m.value_of("TERMINATOR"), Some("\\n"));
+    }
 
-        assert!(!m.is_present("DELIMITER"));
+    #[test]
+    fn implied_terminator_test() {
+        let yml = load_yaml!("../cli.yml");
+        let m = App::from_yaml(yml).get_matches_from(vec!["dedup", "inputfile", "-z"]);       
+        assert_eq!(m.value_of("TERMINATOR"), Some("\\0"));
     }
 }

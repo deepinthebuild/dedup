@@ -22,22 +22,32 @@ impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
         }
     }
 
-    pub fn run(mut self) -> Result<u64, DedupError> {
-        let delim = self.opts.delim;
+    pub fn run(mut self) -> Result<Option<u64>, DedupError> {
+        let terminator = self.opts.terminator;
         let mut count: u64 = 0;
 
         loop {
             let mut buf = Vec::new();
-            self.input.read_until(delim, &mut buf)?;
+            self.input.read_until(terminator, &mut buf)?;
             if buf.is_empty() {
-                return Ok(count);
+                if self.opts.line_count {
+                    return Ok(Some(count));
+                } else {
+                    return Ok(None)
+                }
             }
 
-            if !self.dup_store.contains(&buf) {
-                self.out.write_all(&buf)?;
-                self.dup_store.insert(buf);
-                count += 1;
+            if self.opts.line_count {
+                if self.dup_store.insert(buf) {
+                    count += 1;
+                }
+            } else {
+                if !self.dup_store.contains(&buf) {
+                    self.out.write_all(&buf)?;
+                    self.dup_store.insert(buf);
             }
+            }
+
         }
     }
 }
