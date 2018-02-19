@@ -6,7 +6,6 @@ pub enum DedupError {
     ClosedPipe,
     ArgumentParseError(String),
     IO(io::Error),
-    Other,
 }
 
 impl Display for DedupError {
