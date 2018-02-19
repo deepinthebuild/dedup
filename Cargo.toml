@@ -3,6 +3,10 @@ name = "dedup"
 version = "0.1.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 
+[badges]
+travis-ci = { repository = "cjm00/dedup" }
+appveyor = { repository = "cjm00/dedup" }
+
 [dependencies]
 memchr = "~2"
 memmap = "~0.6.2"
