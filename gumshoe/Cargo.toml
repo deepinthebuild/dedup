@@ -1,0 +1,13 @@
+[package]
+name = "gumshoe"
+version = "0.3.0"
+authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
+
+[dependencies]
+tempfile = "3.0.0"
+memmap = "0.6.2"
+
+[dev-dependencies]
+lazy_static = "1.0.0"
+rayon = "1.0.0"
+byteorder = "1.2.1"

@@ -8,7 +8,6 @@ env:
     - CC_i686_unknown_linux_musl: musl-gcc
 
 matrix:
-  fast_finish: true
   include:
     - env: TARGET=i686-unknown-linux-musl
       os: linux

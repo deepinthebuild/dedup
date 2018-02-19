@@ -16,8 +16,6 @@ environment:
     - TARGET: x86_64-pc-windows-msvc
       CHANNEL: nightly
 
-matrix:
-  fast_finish: true
 
 
 install:

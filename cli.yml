@@ -5,24 +5,41 @@ about: Deduplicates entries in file or stream
 args:
   - INPUT:
       help: Specifies the input file to read from. Omit or supply '-' to read from stdin.
-      index: 1
+
   - OUTPUT:
       short: o
       long: output
       takes_value: true
       value_name: OUTPUT
       use_delimiter: false
+
   - MMAP:
       help: Enables use of memory mapped files. This is enabled by default.
       long: mmap
       conflicts_with: NO_MMAP
       takes_value: false
+
   - NO_MMAP:
       help: Prohibits usage of memory mapped files. This will slow down the deduplication process significantly!
       long: no-mmap
       takes_value: false
-  - DELIMITER:
-        help: Specifies the byte pattern to separate entries by. Default is system-specified newline.
-        short: z
-        long: delimiter
-        takes_value: true
+
+  - ZEROTERMINATED:
+      help: Specifies that entries should be intepreted as being separated by a null byte rather than a newline.
+      short: z
+      long: zero-terminated
+      conflicts_with: TERMINATOR
+      takes_value: false
+
+  - TERMINATOR:
+      help: Specifies the single-byte pattern to separate entries by. Default is newline.
+      long: terminator
+      default_value_if:
+          - [ZEROTERMINATED, Null, "\\0"]
+      default_value: "\\n"
+
+  - COUNTLINES:
+      help: If flag is set only print the number of unique entries found.
+      short: l
+      long: count-lines
+      takes_value: false

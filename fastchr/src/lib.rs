@@ -57,14 +57,12 @@ impl<'a> Fastchr<'a> {
 impl<'a> Iterator for Fastchr<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
-        fastchr(self.needle, self.haystack).map(
-            move |new_index| {
-                self.haystack = self.haystack.split_at(new_index + 1).1;
-                let found_pos = self.position + new_index;
-                self.position = found_pos + 1;
-                found_pos
-            }
-        )
+        fastchr(self.needle, self.haystack).map(move |new_index| {
+            self.haystack = self.haystack.split_at(new_index + 1).1;
+            let found_pos = self.position + new_index;
+            self.position = found_pos + 1;
+            found_pos
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -260,35 +258,38 @@ mod tests {
     const NEEDLE: u8 = 70;
 
     fn generate_long_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(LONG_PREFIX_LEN)
+        iter::repeat(14u8)
+            .take(LONG_PREFIX_LEN)
             .chain(iter::once(NEEDLE))
             .chain(iter::repeat(200u8).take(ODD_PREFIX_LEN))
             .collect()
     }
 
     fn generate_short_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(SHORT_PREFIX_LEN)
+        iter::repeat(14u8)
+            .take(SHORT_PREFIX_LEN)
             .chain(iter::once(NEEDLE))
             .collect()
     }
 
     fn generate_odd_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(ODD_PREFIX_LEN)
+        iter::repeat(14u8)
+            .take(ODD_PREFIX_LEN)
             .chain(iter::once(NEEDLE))
             .collect()
     }
     fn generate_long_negative_sample() -> Vec<u8> {
-        iter::repeat(231).take(ODD_PREFIX_LEN)
-        .collect()
+        iter::repeat(231).take(ODD_PREFIX_LEN).collect()
     }
 
     fn generate_buried_sample() -> Vec<u8> {
-        iter::repeat(231u8).take(BURIED_SAMPLE_LEN)
-        .chain(iter::once(NEEDLE))
-        .chain(iter::repeat(231u8).take(3))
-        .chain(iter::once(NEEDLE))
-        .chain(iter::repeat(231u8).take(ODD_PREFIX_LEN))
-        .collect()
+        iter::repeat(231u8)
+            .take(BURIED_SAMPLE_LEN)
+            .chain(iter::once(NEEDLE))
+            .chain(iter::repeat(231u8).take(3))
+            .chain(iter::once(NEEDLE))
+            .chain(iter::repeat(231u8).take(ODD_PREFIX_LEN))
+            .collect()
     }
 
     #[test]
@@ -302,7 +303,7 @@ mod tests {
         let data = generate_long_negative_sample();
         assert_eq!(None, fastchr(NEEDLE, &data));
     }
-    
+
     #[test]
     fn qbf_test() {
         let haystack = b"the quick brown fox";

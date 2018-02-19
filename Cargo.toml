@@ -1,6 +1,6 @@
 [package]
 name = "dedup"
-version = "0.2.0"
+version = "0.2.0-gumshoe"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 repository = "https://github.com/cjm00/dedup"
 homepage = "https://github.com/cjm00/dedup"
@@ -17,13 +17,24 @@ appveyor = { repository = "cjm00/dedup" }
 
 [dependencies]
 memchr = "~2"
-memmap = "~0.6.2"
+memmap = "~0.6"
 clap = { version = "~2.30", features = ["yaml"] }
-fxhash = "0.2.1"
-fastchr = { version = "0.3", path = "fastchr"}
+fxhash = "~0.2"
+fastchr = { version = "0.3", path = "fastchr" }
+gumshoe = { version = "0.3", path = "gumshoe" }
+lumpy_chunks = { version = "0.1", path = "lumpy_chunks" }
+rayon = "~1"
+seahash = "~3"
+crossbeam-utils = "^0.4"
+crossbeam-deque = "^0.3"
+num_cpus = "~1"
+
+[patch.crates-io]
+crossbeam-utils = { git = "https://github.com/cjm00/crossbeam-utils" }
 
 [profile.release]
 opt-level = 3
+codegen-units = 1
 lto = true
 debug = true
 
@@ -35,4 +46,4 @@ name = "dedup"
 [features]
 
 [workspace]
-members = ["fastchr"]
+members = ["fastchr", "gumshoe", "lumpy_chunks"]
