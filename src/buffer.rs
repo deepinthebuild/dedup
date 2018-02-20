@@ -23,7 +23,10 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
         UnsortedBufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
-            dup_store: SeaHashSet::with_capacity_and_hasher(buffer.as_ref().len() / 50, Default::default()),
+            dup_store: SeaHashSet::with_capacity_and_hasher(
+                buffer.as_ref().len() / 50,
+                Default::default(),
+            ),
             opts,
         }
     }
