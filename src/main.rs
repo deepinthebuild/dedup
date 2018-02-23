@@ -2,7 +2,7 @@
 extern crate clap;
 extern crate memchr;
 extern crate memmap;
-extern crate seahash;
+extern crate fxhash;
 extern crate fastchr;
 
 use memmap::Mmap;
@@ -21,6 +21,7 @@ mod buffer;
 mod error;
 mod args;
 mod stream;
+mod set;
 
 fn main() {
     match Args::parse().and_then(run) {

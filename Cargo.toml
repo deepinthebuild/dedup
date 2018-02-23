@@ -11,7 +11,7 @@ appveyor = { repository = "cjm00/dedup" }
 memchr = "~2"
 memmap = "~0.6.2"
 clap = { version = "~2.30", features = ["yaml"] }
-seahash = "~3.0.5"
+fxhash = "0.2.1"
 fastchr = { version = "^0.1", path = "fastchr", optional = true }
 
 [profile.release]

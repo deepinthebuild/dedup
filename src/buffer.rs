@@ -3,23 +3,18 @@ use memchr::memchr;
 #[cfg(feature = "simd-accel")]
 use fastchr::fastchr as memchr;
 
-use seahash::SeaHasher;
-
 use args::Options;
 use error::DedupError;
+use set::Set;
 
 use std::io;
 use std::default::Default;
-use std::collections::HashSet;
-use std::hash::BuildHasherDefault;
-
-type SeaHashSet<T> = HashSet<T, BuildHasherDefault<SeaHasher>>;
 
 pub struct BufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
     out: W,
-    dup_store: SeaHashSet<&'a [u8]>,
+    dup_store: Set<&'a [u8]>,
 }
 
 impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
@@ -27,7 +22,7 @@ impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
         BufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
-            dup_store: SeaHashSet::with_capacity_and_hasher(
+            dup_store: Set::with_capacity_and_hasher(
                 buffer.as_ref().len() / 50,
                 Default::default(),
             ),
