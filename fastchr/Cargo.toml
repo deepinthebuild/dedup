@@ -1,0 +1,13 @@
+[package]
+name = "fastchr"
+version = "0.1.0"
+authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
+description = "Faster memchr using SIMD intrinsics"
+license = "Apache-2.0/MIT"
+
+[dependencies]
+faster = "0.4.3"
+stdsimd = "^0.0.4"
+
+[dev-dependencies]
+memchr = "2.0.1"
