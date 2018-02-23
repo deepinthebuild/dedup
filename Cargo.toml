@@ -10,8 +10,9 @@ appveyor = { repository = "cjm00/dedup" }
 [dependencies]
 memchr = "~2"
 memmap = "~0.6.2"
-clap = {version = "~2.30", features = ["yaml"]}
+clap = { version = "~2.30", features = ["yaml"] }
 seahash = "~3.0.5"
+fastchr = { version = "^0.1", path = "fastchr", optional = true }
 
 [profile.release]
 opt-level = 3
@@ -21,6 +22,10 @@ lto = true
 bench = false
 path = "src/main.rs"
 name = "dedup"
+
+[features]
+default = ["simd-accel"]
+simd-accel = ["fastchr"]
 
 [workspace]
 members = ["fastchr"]
