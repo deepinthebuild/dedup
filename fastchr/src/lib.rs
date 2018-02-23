@@ -1,10 +1,12 @@
-#![feature(test, asm, cfg_target_feature)]
+#![feature(test, cfg_target_feature)]
 
 
 extern crate faster;
+extern crate stdsimd;
+
 
 use faster::prelude::*;
-
+use stdsimd::vendor::*;
 
 pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     let mut iter = haystack.simd_iter();
@@ -21,43 +23,25 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
             return Some(iter.scalar_position() - 1);
         }
     }
+    
     None
 }
 
-#[cfg(all(not(target_feature="avx"), target_feature="sse2"))]
 #[inline]
-fn v_to_byte_mask(v: u8s, needle: u8) -> u64 {
+fn v_to_byte_mask(v: u8s, needle: u8) -> usize {
     unsafe {
         let n = u8s(needle);
-        let ret: u64;
-        asm!(
-         "PCMPEQB $1, $2
-          PMOVMSKB $0, $1" 
-         :"=q"(ret) 
-         : "x"(n), "x"(v)
-         : "$0", "$1", "$2"
-         : "intel", "alignstack");
-        ret
+        let n = v.eq(n);
+
+        #[cfg(all(not(target_feature = "avx"), target_feature = "sse2"))]
+        {_mm_movemask_epi8(n) as usize }
+        
+        #[cfg(target_feature = "avx")]
+        {_mm256_movemask_epi8(n) as usize }
     }
 }
 
-#[cfg(target_feature="avx")]
-#[inline]
-fn v_to_byte_mask(v: u8s, needle: u8) -> u64 {
-    unsafe {
-        let n = u8s(needle);
-        let j: u8s;
-        let ret: u64;
-        asm!(
-         "VPCMPEQB $1, $2, $3
-          VPMOVMSKB $0, $1" 
-         :"=q"(ret), "=x"(j)
-         : "x"(v), "x"(n) 
-         : "$0", "$1", "$2"
-         : "intel", "alignstack");
-        ret
-    }
-}
+
 
 #[cfg(test)]
 mod tests {
