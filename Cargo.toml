@@ -21,3 +21,6 @@ lto = true
 bench = false
 path = "src/main.rs"
 name = "dedup"
+
+[workspace]
+members = ["fastchr"]
