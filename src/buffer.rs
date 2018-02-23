@@ -15,16 +15,16 @@ use std::hash::BuildHasherDefault;
 
 type SeaHashSet<T> = HashSet<T, BuildHasherDefault<SeaHasher>>;
 
-pub struct UnsortedBufferDeduper<'a, W: io::Write + 'a> {
+pub struct BufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
     out: W,
     dup_store: SeaHashSet<&'a [u8]>,
 }
 
-impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
+impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
     pub fn new<R: AsRef<[u8]>>(buffer: &'a R, output: W, opts: Options) -> Self {
-        UnsortedBufferDeduper {
+        BufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
             dup_store: SeaHashSet::with_capacity_and_hasher(
@@ -77,7 +77,7 @@ ham eggs
     fn buf_breakfast_dedup() {
         let mut output: Vec<u8> = Vec::new();
         {
-            let dedup = UnsortedBufferDeduper::new(&BREAKFAST, &mut output, Options::default());
+            let dedup = BufferDeduper::new(&BREAKFAST, &mut output, Options::default());
             dedup.run().unwrap();
         }
         assert_eq!(BREAKFAST_DEDUP, str::from_utf8(&output).unwrap());

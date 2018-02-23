@@ -9,7 +9,7 @@ use memmap::Mmap;
 
 use args::Args;
 use error::DedupError;
-use buffer::UnsortedBufferDeduper;
+use buffer::BufferDeduper;
 use stream::UnsortedStreamDeduper;
 
 use std::io::{self, BufWriter, Read};
@@ -47,12 +47,12 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
         if let Some(ref p) = args.output {
             let output = OpenOptions::new().write(true).create(true).open(p)?;
             let output = BufWriter::new(output);
-            let dedup = UnsortedBufferDeduper::new(&input, output, (&args).into());
+            let dedup = BufferDeduper::new(&input, output, (&args).into());
             dedup.run()
         } else {
             let out = io::stdout();
             let output = out.lock();
-            let dedup = UnsortedBufferDeduper::new(&input, output, args.into());
+            let dedup = BufferDeduper::new(&input, output, args.into());
             dedup.run()
         }
     } else {
@@ -60,12 +60,12 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
         if let Some(ref p) = args.output {
             let output = OpenOptions::new().write(true).create(true).open(p)?;
             let output = BufWriter::new(output);
-            let dedup = UnsortedBufferDeduper::new(&input, output, (&args).into());
+            let dedup = BufferDeduper::new(&input, output, (&args).into());
             dedup.run()
         } else {
             let out = io::stdout();
             let output = out.lock();
-            let dedup = UnsortedBufferDeduper::new(&input, output, args.into());
+            let dedup = BufferDeduper::new(&input, output, args.into());
             dedup.run()
         }
     }
