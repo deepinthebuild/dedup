@@ -10,7 +10,6 @@ pub struct Args {
     pub output: Option<PathBuf>,
     pub mmap: bool,
     pub delim: u8,
-    pub crlf: bool,
 }
 
 impl Args {
@@ -25,32 +24,23 @@ impl Args {
         let mmap = !m.is_present("NO_MMAP");
         let delim = m.value_of("DELIMITER")
             .map_or(Ok(b'\n'), parse_to_byte_literal)?;
-        #[cfg(windows)]
-        let mut crlf = true;
-        #[cfg(not(windows))]
-        let mut crlf = false;
-
-        crlf &= m.occurrences_of("DELIMITER") == 0;
-
+        
         Ok(Args {
             input,
             output,
             mmap,
             delim,
-            crlf,
         })
     }
 }
 
 pub struct Options {
-    pub crlf: bool,
     pub delim: u8,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
-            crlf: true,
             delim: b'\n',
         }
     }
@@ -60,7 +50,6 @@ impl From<Args> for Options {
     fn from(src: Args) -> Self {
         Options {
             delim: src.delim,
-            crlf: src.crlf,
         }
     }
 }
@@ -69,7 +58,6 @@ impl<'a> From<&'a Args> for Options {
     fn from(src: &'a Args) -> Self {
         Options {
             delim: src.delim,
-            crlf: src.crlf,
         }
     }
 }

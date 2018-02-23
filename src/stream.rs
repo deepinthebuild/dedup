@@ -37,15 +37,8 @@ impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
                 return Ok(count);
             }
 
-            buf.pop();
-            if self.opts.crlf {
-                if let Some(&b'\r') = buf.last() {
-                    buf.pop();
-                }
-            }
             if !self.dup_store.contains(&buf) {
                 self.out.write_all(&buf)?;
-                self.out.write_all(&[delim])?;
                 self.dup_store.insert(buf);
                 count += 1;
             }

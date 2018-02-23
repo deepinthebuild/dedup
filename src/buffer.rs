@@ -39,17 +39,11 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
         let delim = self.opts.delim;
         let mut count: u64 = 0;
         while let Some(u) = memchr(delim, self.buffer) {
-            let (mut ele, rest) = self.buffer.split_at(u);
-            if self.opts.crlf {
-                if let Some(&b'\r') = ele.last() {
-                    ele = &ele[..ele.len() - 1];
-                }
-            }
+            let (mut ele, rest) = self.buffer.split_at(u + 1);
             if self.dup_store.insert(ele) {
                 self.out.write_all(ele)?;
-                self.out.write_all(&[delim])?;
             }
-            self.buffer = rest.get(1..).unwrap_or(&[]);
+            self.buffer = rest;
             count += 1;
         }
 
