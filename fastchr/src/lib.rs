@@ -4,7 +4,6 @@
 extern crate faster;
 extern crate stdsimd;
 
-
 use faster::prelude::*;
 use stdsimd::vendor::*;
 
@@ -15,7 +14,7 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     while let Some(v) = iter.next_vector() {
         let b = v_to_byte_mask(v, needle);
         if b != 0 {
-            return Some(iter.scalar_position() + b.trailing_zeros() as usize);
+            return Some(iter.scalar_position() + b.trailing_zeros() as usize - u8s::WIDTH);
         }
     }
 
@@ -57,12 +56,13 @@ mod tests {
     use std::iter;
 
     const LONG_PREFIX_LEN: usize = 500000;
-    const SHORT_PREFIX_LEN: usize = 5;
+    const SHORT_PREFIX_LEN: usize = u8s::WIDTH * 2 - 1;
     const ODD_PREFIX_LEN: usize = 50003;
 
     fn generate_long_sample() -> Vec<u8> {
             iter::repeat(14u8).take(LONG_PREFIX_LEN)
             .chain(iter::once(70u8))
+            .chain(iter::repeat(200u8).take(ODD_PREFIX_LEN))
             .collect()
     }
 
@@ -77,7 +77,26 @@ mod tests {
             .chain(iter::once(70u8))
             .collect()
     }
+    
+    #[test]
+    fn example_test() {
+        let haystack = b"the quick brown fox";
+        println!("{:?}", haystack);
+        println!("{:?}", (&haystack[..]).simd_iter().next_vector());
+        assert_eq!(fastchr(b'k', haystack), Some(8));
+    }
 
+    #[test]
+    fn memchr_odd_compat_test() {
+        let data = generate_odd_sample();
+        assert_eq!(memchr(70, &data), fastchr(70, &data));
+    }
+
+    #[test]
+    fn memchr_short_compat_test() {
+        let data = generate_short_sample();
+        assert_eq!(memchr(70, &data), fastchr(70, &data));
+    }
 
     #[test]
     fn long_find_test() {
