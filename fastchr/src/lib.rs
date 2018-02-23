@@ -34,10 +34,10 @@ fn v_to_byte_mask(v: u8s, needle: u8) -> usize {
         let n = v.eq(n);
 
         #[cfg(all(not(target_feature = "avx"), target_feature = "sse2"))]
-        {_mm_movemask_epi8(n) as usize }
+        { _mm_movemask_epi8(n) as usize }
         
         #[cfg(target_feature = "avx")]
-        {_mm256_movemask_epi8(n) as usize }
+        { _mm256_movemask_epi8(n) as usize }
     }
 }
 
