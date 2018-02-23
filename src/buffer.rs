@@ -1,4 +1,8 @@
+#[cfg(not(feature = "simd-accel"))]
 use memchr::memchr;
+#[cfg(feature = "simd-accel")]
+use fastchr::fastchr as memchr;
+
 use seahash::SeaHasher;
 
 use args::Options;
@@ -45,7 +49,7 @@ impl<'a, W: io::Write + 'a> UnsortedBufferDeduper<'a, W> {
                 self.out.write_all(ele)?;
                 self.out.write_all(&[delim])?;
             }
-            self.buffer = &rest[1..];
+            self.buffer = rest.get(1..).unwrap_or(&[]);
             count += 1;
         }
 

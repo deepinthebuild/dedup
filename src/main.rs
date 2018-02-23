@@ -3,6 +3,7 @@ extern crate clap;
 extern crate memchr;
 extern crate memmap;
 extern crate seahash;
+extern crate fastchr;
 
 use memmap::Mmap;
 
