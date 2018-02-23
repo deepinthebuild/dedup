@@ -8,6 +8,7 @@ extern crate stdsimd;
 use faster::prelude::*;
 use stdsimd::vendor::*;
 
+#[inline]
 pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     let mut iter = haystack.simd_iter();
 
@@ -23,7 +24,7 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
             return Some(iter.scalar_position() - 1);
         }
     }
-    
+
     None
 }
 
