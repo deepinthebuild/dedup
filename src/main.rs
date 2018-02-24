@@ -77,7 +77,7 @@ fn run_on_stdin(args: Args) -> Result<u64, DedupError> {
     let input = _input.lock();
 
     if let Some(ref p) = args.output {
-        let output = OpenOptions::new().write(true).open(p)?;
+        let output = OpenOptions::new().write(true).create(true).open(p)?;
         let output = BufWriter::new(output);
         let dedup = UnsortedStreamDeduper::new(input, output, (&args).into());
         dedup.run()
