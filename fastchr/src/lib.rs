@@ -28,16 +28,16 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 }
 
 #[inline]
-fn v_to_byte_mask(v: u8s, needle: u8) -> usize {
+fn v_to_byte_mask(mut v: u8s, needle: u8) -> usize {
     unsafe {
-        let n = u8s(needle);
-        let n = v.eq(n);
+        v ^= u8s(needle);
+        v -= u8s(1);
 
         #[cfg(all(not(target_feature = "avx"), target_feature = "sse2"))]
-        { _mm_movemask_epi8(n) as usize }
+        { _mm_movemask_epi8(v.into()) as usize }
         
         #[cfg(target_feature = "avx")]
-        { _mm256_movemask_epi8(n) as usize }
+        { _mm256_movemask_epi8(v.into()) as usize }
     }
 }
 
