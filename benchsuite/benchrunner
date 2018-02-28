@@ -9,9 +9,11 @@ import argparse
 import time
 import platform
 import shutil
+import tempfile
 
+from collections import defaultdict
 from operator import itemgetter
-from statistics import mean, median
+from statistics import mean, pstdev
 
 BENCH_FILE_PATH = os.path.abspath(__file__)
 BENCH_DIR = os.path.dirname(BENCH_FILE_PATH)
@@ -26,26 +28,170 @@ CORPUS_URL = "opus.nlpl.eu/download.php?f=Europarl/en.raw.tar.gz"
 DEDUP_BIN_NAME = "dedup" + (".exe" if platform.system() == 'Windows' else "")
 DEDUP_BIN_PATH = os.path.join(PROJECT_PATH, "target", "release", DEDUP_BIN_NAME)
 
-class Benchmarker():
-    def __init__(self, name, warmup=1, count=3, commands=None, directory=None):
+SORT_PATH = "sort"
+
+BLOB_PATH = ""
+
+class MissingCommands(Exception):
+    def __init__(self, missing_names):
+        self.missing = missing_names
+
+    def __str__(self):
+        return "MissingCommands({})".format(repr(self.missing))
+
+class Command():
+    def __init__(self, name, cmd, *args, **kwargs):
         self.name = name
+        self.cmd = cmd
+        self.args = args
+        self.kwargs = kwargs
+
+    def exists(self):
+        return shutil.which(self.binary_name) is not None
+
+    @property
+    def binary_name(self):
+        return self.cmd[0]
+
+    def run(self):
+        return subprocess.run(self.cmd, *self.args, **self.kwargs)
+
+
+class Benchmarker():
+    def __init__(self, warmup=1, count=3, commands=None, directory=None, use_tempfile=False, count_lines=False):
         self.warmup = warmup
         self.count = count
         self.commands = commands or []
         self.directory = directory
+        self.use_tempfile = use_tempfile
+        self.count_lines = count_lines
+
+    def check_if_missing(self):
+        missing = []
+        for cm in self.commands:
+            if not cm.exists():
+                missing.append(cm.binary_name)
+
+        if missing:
+            raise MissingCommands(missing)
+
+    def run_once(self, cmd):
+        if not cmd.exists():
+            raise MissingCommands([cmd.binary_name])
+
+        cmd.kwargs["stdout"] = subprocess.DEVNULL
+        cmd.kwargs["cwd"] = self.directory
+
+        start = time.time()
+        res = cmd.run()
+        end = time.time()
+
+
+        line_count = None
+
+        if self.count_lines:
+            line_count = res.stdout.count(b'\n')
+
+        return {
+            'duration' : end - start,
+            'line_count' : line_count
+        }
+
+    def run_once_with_temp_file(self, cmd):
+        if not cmd.exists():
+            raise MissingCommands([cmd.binary_name])
+
+        cmd.kwargs["stdout"] = subprocess.DEVNULL
+        cmd.kwargs["cwd"] = self.directory
+
+       
+        tmp = tempfile.NamedTemporaryFile()
+
+        cmd.cmd.append(tmp.name)
+        
+        start = time.time()
+        res = cmd.run()
+        end = time.time()
+
+        cmd.cmd.pop()
+
+        line_count = None
+
+        if self.count_lines:
+            line_count = res.stdout.count(b'\n')
+
+        return {
+            'duration' : end - start,
+            'line_count' : line_count
+        }
     
     def run(self):
-        times = []
-        for _ in range(self.warmup):
-            subprocess.run(self.commands, cwd=self.directory, stdout=subprocess.DEVNULL)
+        self.check_if_missing()
 
-        for _ in range(self.count):
-            start = time.time()
-            subprocess.run(self.commands, cwd=self.directory, stdout=subprocess.DEVNULL)
-            end = time.time()
-            times.append(end - start)
+        times = defaultdict(list)
+
+        for cmd in self.commands:
+            for _ in range(self.warmup):
+                self.run_once(cmd)
+            for _ in range(self.count):
+                times[cmd.name].append(self.run_once(cmd)["duration"])
 
         return times
+
+    def run_with_temp(self):
+        self.check_if_missing()
+
+        times = defaultdict(list)
+
+        for cmd in self.commands:
+            for _ in range(self.warmup):
+                self.run_once_with_temp_file(cmd)
+            for _ in range(self.count):
+                times[cmd.name].append(self.run_once_with_temp_file(cmd)["duration"])
+
+        return times
+
+def bench_europarl_to_stdout(config, args):
+    cmds = []
+
+    if args.run in ["sort", "all"]:
+        cmds.append(
+            Command("sort", [SORT_PATH, "-u", BLOB_PATH])
+        )
+    if args.run in ["dedup", "all"]:
+        cmds.append(
+            Command("dedup", [DEDUP_BIN_PATH, BLOB_PATH])
+        )
+    if args.run in ["awk", "all"]:
+        cmds.append(
+            Command('awk', ['awk', '!seen[$0]++', BLOB_PATH])
+        )
+
+    bencher = Benchmarker(commands=cmds, **config)
+    benches = bencher.run()
+
+    for k, v in benches.items():
+        print("{} : Mean: {:.4} Stddev: {:.4}".format(k, mean(v), pstdev(v)))
+
+
+def bench_europarl_to_tempfile(config, args):
+    cmds = []
+
+    if args.run in ["sort", "all"]:
+        cmds.append(
+            Command("sort", [SORT_PATH, "-u", BLOB_PATH, "-o"])
+        )
+    if args.run in ["dedup", "all"]:
+        cmds.append(
+            Command("dedup", [DEDUP_BIN_PATH, BLOB_PATH, "-o"])
+        )
+
+    bencher = Benchmarker(commands=cmds, **config)
+    benches = bencher.run_with_temp()
+
+    for k, v in benches.items():
+        print("{} : Mean: {:.4} Stddev: {:.4}".format(k, mean(v), pstdev(v)))
+
 
 def download_and_pack_corpus(directory):
     corpus_archive = os.path.join(directory, CORPUS_NAME_GZ)
@@ -95,36 +241,32 @@ def main():
     p.add_argument(
         '--dir', metavar='TESTDIR', default=BENCH_DIR
     )
+    p.add_argument(
+        '--use-tempfile', action='store_true'
+    )
     args = p.parse_args()
+
+    global SORT_PATH 
+    SORT_PATH = args.sortpath
 
     config = dict()
     config["count"] = args.benches
     config["warmup"] = args.warmup
     config["directory"] = os.path.join(args.dir, TEST_DIR)
+    config["use_tempfile"] = args.use_tempfile
 
     download_and_pack_corpus(config["directory"])
 
     if args.run in ["all", "dedup"]:
         build_dedup()
 
+    global BLOB_PATH
     BLOB_PATH = os.path.join(config["directory"], BLOB_NAME)
 
-    benches = {
-    "sort" : Benchmarker("sort", commands = [args.sortpath, '-u', BLOB_PATH], **config),
-    "dedup" : Benchmarker("dedup", commands = [DEDUP_BIN_PATH, BLOB_PATH], **config),
-    "awk" : Benchmarker("awk", commands = ['awk', '!seen[$0]++', BLOB_PATH], **config)
-    }
-
-    if args.run == "all":
-        results = [(n, b.run()) for n, b in benches.items()]
-        for testname, result in sorted(results, key=itemgetter(0)) :
-            print("{} : mean: {:.4} median: {:.4}".format(testname, mean(result), median(result)))
+    if not args.use_tempfile:
+        bench_europarl_to_stdout(config, args)
     else:
-        testname = args.run
-        bench = benches[testname]
-        result = bench.run()
-        print("{} : mean: {:.4} median: {:.4}".format(testname, mean(result), median(result)))
-
+        bench_europarl_to_tempfile(config, args)
 
 if __name__ == '__main__':
     main()
