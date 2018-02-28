@@ -17,6 +17,7 @@ fastchr = { version = "^0.1", path = "fastchr", optional = true }
 [profile.release]
 opt-level = 3
 lto = true
+debug = true
 
 [[bin]]
 bench = false
