@@ -3,15 +3,9 @@
 set -ex
 
 main() {
-    cargo build --target $TARGET
-    cargo build --target $TARGET --release
 
-    if [ ! -z $DISABLE_TESTS ]; then
-        return
-    fi
-
-    cargo test --target $TARGET
-    cargo test --target $TARGET --release
+    cargo test --target $TARGET --all
+    cargo test --target $TARGET --release --all
 
 }
 
