@@ -171,7 +171,7 @@ def bench_europarl_to_stdout(config, args):
     benches = bencher.run()
 
     for k, v in benches.items():
-        print("{:8} - Fastest Run: {:<04.3}s  Average Run Time: {:<04.3}s  Standard Deviation: {:<04.3}".format(k, min(v), mean(v), pstdev(v)))
+        print("{:8} - Fastest Run: {:<04.3}s  Average Run Time: {:<04.3}s  Stddev: {:<04.3}".format(k, min(v), mean(v), pstdev(v)))
 
 
 def bench_europarl_to_tempfile(config, args):
@@ -190,7 +190,7 @@ def bench_europarl_to_tempfile(config, args):
     benches = bencher.run_with_temp()
 
     for k, v in benches.items():
-        print("{:8} - Fastest Run: {:<04.3}s  Average Run Time: {:<04.3}s  Standard Deviation: {:<04.3}".format(k, min(v), mean(v), pstdev(v)))
+        print("{:8} - Fastest Run: {:<04.3}s  Average Run Time: {:<04.3}s  Stddev: {:<04.3}".format(k, min(v), mean(v), pstdev(v)))
 
 
 def download_and_pack_corpus(directory):
