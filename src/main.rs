@@ -52,7 +52,7 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
             dedup.run()
         } else {
             let out = io::stdout();
-            let output = out.lock();
+            let output = BufWriter::new(out.lock());
             let dedup = BufferDeduper::new(&input, output, args.into());
             dedup.run()
         }
@@ -65,7 +65,7 @@ fn run_on_file(args: Args) -> Result<u64, DedupError> {
             dedup.run()
         } else {
             let out = io::stdout();
-            let output = out.lock();
+            let output = BufWriter::new(out.lock());
             let dedup = BufferDeduper::new(&input, output, args.into());
             dedup.run()
         }
