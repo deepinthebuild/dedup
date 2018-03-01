@@ -1,4 +1,4 @@
-set -ex
+set -x
 export PATH="$PATH:$HOME/.cargo/bin"
 
 gethost() {
