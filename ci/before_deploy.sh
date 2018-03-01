@@ -17,7 +17,7 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
-    cross rustc --bin dedup --target $TARGET --release -- -C lto
+    cargo rustc --bin dedup --target $TARGET --release -- -C lto
 
     cp target/$TARGET/release/dedup $stage/
 
