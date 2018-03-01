@@ -1,3 +1,5 @@
+set -eux
+
 export PATH="$PATH:$HOME/.cargo/bin"
 
 gethost() {
@@ -19,8 +21,8 @@ install_rustup() {
 }
 
 install_targets() {
-    local host=gethost
-    if [ host != "$TARGET" ]; then
+
+    if [ "$(gethost)" != "$TARGET" ]; then
         rustup target add $TARGET
     fi
 }
