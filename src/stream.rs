@@ -18,7 +18,7 @@ impl<R: io::BufRead, W: io::Write> UnsortedStreamDeduper<R, W> {
             input,
             opts: options,
             out: output,
-            dup_store: Set::with_capacity_and_hasher(128, Default::default()),
+            dup_store: Set::with_capacity_and_hasher(1024, Default::default()),
         }
     }
 

@@ -23,7 +23,7 @@ impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
             buffer: buffer.as_ref(),
             out: output,
             dup_store: Set::with_capacity_and_hasher(
-                buffer.as_ref().len() / 300,
+                (buffer.as_ref().len() / 256).next_power_of_two(),
                 Default::default(),
             ),
             opts,
