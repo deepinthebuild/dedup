@@ -1,6 +1,16 @@
 set -ex
 export PATH="$PATH:$HOME/.cargo/bin"
 
+gethost() {
+    case "$TRAVIS_OS_NAME" in
+        linux)
+            echo x86_64-unknown-linux-gnu
+            ;;
+        osx)
+            echo x86_64-apple-darwin
+            ;;
+    esac
+}
 
 install_rustup() {
     curl https://sh.rustup.rs -sSf \
@@ -10,7 +20,8 @@ install_rustup() {
 }
 
 install_targets() {
-    if [ $(host) != "$TARGET" ]; then
+    local host = gethost
+    if [ host != "$TARGET" ]; then
         rustup target add $TARGET
     fi
 }
