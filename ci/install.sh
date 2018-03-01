@@ -21,7 +21,7 @@ install_rustup() {
 install_targets() {
     local host=gethost
     if [ host != "$TARGET" ]; then
-        rustup target add $TARGET --nightly
+        rustup target add $TARGET
     fi
 }
 
