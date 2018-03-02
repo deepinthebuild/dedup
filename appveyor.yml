@@ -63,8 +63,8 @@ cache:
   - C:\Users\appveyor\.cargo\registry
   - target
 
-branches:
-  only:
+#branches:
+#  only:
     # Test all branches
 
 notifications:
