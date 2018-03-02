@@ -65,9 +65,7 @@ cache:
 
 branches:
   only:
-    # Release tags
-    - /^v\d+\.\d+\.\d+.*$/
-    - master
+    # Test all branches
 
 notifications:
   - provider: Email
