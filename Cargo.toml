@@ -12,7 +12,7 @@ memchr = "~2"
 memmap = "~0.6.2"
 clap = { version = "~2.30", features = ["yaml"] }
 fxhash = "0.2.1"
-fastchr = { version = "^0.1", path = "fastchr", optional = true }
+fastchr = { version = "0.1", path = "./fastchr", optional = true }
 
 [profile.release]
 opt-level = 3
