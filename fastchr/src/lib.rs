@@ -10,6 +10,9 @@ use std::arch::x86_64::_mm_movemask_epi8 as movemask;
 #[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
 use std::arch::x86_64::_mm256_movemask_epi8 as movemask;
 
+#[cfg(all(target_arch = "x86", target_feature = "sse2"))]
+use std::arch::x86::_mm_movemask_epi8 as movemask;
+
 use std::mem;
 
 #[inline]

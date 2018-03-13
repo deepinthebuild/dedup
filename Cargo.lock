@@ -48,7 +48,7 @@ name = "dedup"
 version = "0.2.0"
 dependencies = [
  "clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fastchr 0.1.0",
+ "fastchr 0.2.0",
  "fxhash 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -56,11 +56,10 @@ dependencies = [
 
 [[package]]
 name = "fastchr"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "faster 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdsimd 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
