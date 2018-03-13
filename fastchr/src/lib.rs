@@ -1,11 +1,16 @@
-#![feature(test, cfg_target_feature)]
-
+#![feature(test, cfg_target_feature, stdsimd)]
 
 extern crate faster;
-extern crate stdsimd;
 
 use faster::prelude::*;
-use stdsimd::vendor::*;
+
+#[cfg(all(target_arch = "x86_64", all(not(target_feature = "avx"), target_feature = "sse2")))]
+use std::arch::x86_64::_mm_movemask_epi8 as movemask;
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
+use std::arch::x86_64::_mm256_movemask_epi8 as movemask;
+
+use std::mem;
 
 #[inline]
 pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
@@ -31,12 +36,7 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 fn v_to_byte_mask(v: u8s, needle: u8) -> usize {
     unsafe {
         let v = v.eq(u8s(needle));
-
-        #[cfg(all(not(target_feature = "avx"), target_feature = "sse2"))]
-        { _mm_movemask_epi8(v) as usize }
-        
-        #[cfg(target_feature = "avx")]
-        { _mm256_movemask_epi8(v) as usize }
+        movemask(mem::transmute(v)) as usize 
     }
 }
 
