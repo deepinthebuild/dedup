@@ -1,5 +1,5 @@
 name: dedup
-version: "0.1"
+version: "0.2"
 author: Chris McDonald <mail.chris.mcdonald@gmail.com>
 about: Deduplicates entries in file or stream
 args:
