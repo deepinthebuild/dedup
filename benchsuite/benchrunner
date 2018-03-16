@@ -109,9 +109,9 @@ class Benchmarker():
 
         cmd.cmd.append(tmp.name)
         
-        start = time.time()
+        start = time.perf_counter()
         res = cmd.run()
-        end = time.time()
+        end = time.perf_counter()
 
         cmd.cmd.pop()
 
