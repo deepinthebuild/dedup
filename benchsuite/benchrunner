@@ -10,6 +10,8 @@ import time
 import platform
 import shutil
 import tempfile
+import tarfile
+import hashlib
 
 from collections import defaultdict
 from operator import itemgetter
@@ -195,26 +197,41 @@ def bench_europarl_to_tempfile(config, args):
 
 def download_and_pack_corpus(directory):
     corpus_archive = os.path.join(directory, CORPUS_NAME_GZ)
-    corpus_unpacked = os.path.join(directory, CORPUS_UNPACK_DIR)
     blob_location = os.path.join(directory, BLOB_NAME)
 
     if not os.path.isdir(directory):
         os.makedirs(directory)
-    if not os.path.exists(corpus_unpacked):
+    if not os.path.exists(corpus_archive):
         if not os.path.exists(CORPUS_NAME_GZ):
             print("Downloading test corpus...")
             subprocess.run(['curl', '-LO', CORPUS_URL], cwd=directory)
-        print("Unpacking test corpus...")
-        subprocess.run(['tar', '-xzf', CORPUS_NAME_GZ], cwd=directory)
 
-    if not os.path.exists(blob_location):
-        print("Concatenating files in to single blob...")
-        with open(blob_location, 'wb+') as f:
-            for entry in os.listdir(corpus_unpacked):
-                entry = os.path.join(corpus_unpacked, entry)
-                if os.path.isfile(entry):
-                    with gzip.open(entry, 'rb') as g:
-                        f.write(g.read())
+    print("Verifying test corpus..")
+    if not verify_europarl_corpus(blob_location):
+        pack_tarfile_into_txt(corpus_archive, blob_location)
+
+def pack_tarfile_into_txt(tarfile_path, txt_path):
+    print("Building corpus from archive...")
+    with open(txt_path, "w+b") as txt:
+        with tarfile.open(tarfile_path, mode="r:gz") as archive:
+            for member_name in archive.getnames():
+                with gzip.open(archive.extractfile(member_name), "rb") as part:
+                    txt.write(part.read())
+
+def verify_europarl_corpus(corpus_location):
+    corpushash = '74a318fd3fb86d0297661ce3516126d61db19a6bf1692893b71025d11e4116e5'
+    if not os.path.exists(corpus_location):
+        return False
+
+    return hash_file(corpus_location) == corpushash
+
+
+def hash_file(file_path):
+    with open(file_path, "rb") as corpus:
+        h = hashlib.sha256()
+        for block in iter(lambda: corpus.read(8 * 1000 * 1000), b""):
+            h.update(block)
+    return h.hexdigest()
 
 def build_dedup():
     print("Building dedup...")
