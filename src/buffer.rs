@@ -17,7 +17,7 @@ pub struct BufferDeduper<'a, W: io::Write + 'a> {
     buffer: &'a [u8],
     opts: Options,
     out: W,
-    dup_store: ConcurrentSet<'a>,
+    dup_store: ConcurrentSet,
 }
 
 impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
