@@ -25,7 +25,7 @@ impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
         BufferDeduper {
             buffer: buffer.as_ref(),
             out: output,
-            dup_store: ConcurrentSet::default(),
+            dup_store: ConcurrentSet::with_capacity(buffer.as_ref().len() / 256),
             opts,
         }
     }

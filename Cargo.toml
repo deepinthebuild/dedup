@@ -24,6 +24,12 @@ fastchr = { version = "0.2", path = "fastchr", optional = true }
 lumpy_chunks = { version = "0.1", path = "lumpy_chunks" }
 rayon = "1.0.0"
 seahash = "3.0.5"
+poirot = { version = "0.1", path = "poirot" }
+
+[dev-dependencies]
+lazy_static = "1.0.0"
+rayon = "1.0.0"
+byteorder = "1.2.1"
 
 [profile.release]
 opt-level = 3

@@ -7,7 +7,13 @@ extern crate fastchr;
 extern crate rayon;
 extern crate lumpy_chunks;
 extern crate seahash;
+extern crate poirot;
 
+
+#[cfg(test)]
+#[macro_use] extern crate lazy_static;
+#[cfg(test)]
+extern crate byteorder;
 
 use memmap::Mmap;
 
