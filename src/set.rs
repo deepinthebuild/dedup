@@ -1,7 +1,6 @@
 use poirot::ConcurrentHashSet;
 
 use fxhash::FxHasher;
-use seahash::SeaHasher;
 
 use std::collections::HashSet;
 use std::hash::BuildHasherDefault;
@@ -90,7 +89,7 @@ mod tests {
 
     #[test]
     fn many_concurrent_inserts_test() {
-        let set = Arc::new(ConcurrentSet::default());
+        let set = Arc::new(ConcurrentSet::<&'static [u8]>::default());
         let mut handles = Vec::with_capacity(16);
 
         for t in 0..16 {
@@ -118,8 +117,8 @@ mod tests {
 
     #[test]
     fn rayon_filter_test() {
-        let set = ConcurrentSet::default();
-        let results: Vec<&[u8]> = DATA3.par_windows(2).filter(|s| set.insert(s)).collect();
+        let set = ConcurrentSet::<&'static [u8]>::default();
+        let results: Vec<&[u8]> = DATA3.par_windows(2).filter(|s| set.insert(&s)).collect();
         assert_eq!(results.len(), 100);
     }
 
@@ -135,14 +134,14 @@ mod tests {
                 data
             };
         }
-        let set = ConcurrentSet::default();
+        let set = ConcurrentSet::<&'static [u8]>::default();
         let results: Vec<&[u8]> = DATA4.par_chunks(4).filter(|s| set.insert(s)).collect();
         assert_eq!(results.len(), 1_000_000);
     }
 
     #[test]
     fn detect_duplicates_test() {
-        let set = ConcurrentSet::default();
+        let set = ConcurrentSet::<&'static [u8]>::default();
 
         for s in DATA1.windows(3) {
             assert!(set.insert(s));
