@@ -1,6 +1,6 @@
 [package]
 name = "dedup"
-version = "0.2.0-gumshoe"
+version = "0.3.0-poirot"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 repository = "https://github.com/cjm00/dedup"
 homepage = "https://github.com/cjm00/dedup"
@@ -24,7 +24,7 @@ fastchr = { version = "0.2", path = "fastchr", optional = true }
 lumpy_chunks = { version = "0.1", path = "lumpy_chunks" }
 rayon = "1.0.0"
 seahash = "3.0.5"
-poirot = { version = "0.1", path = "poirot" }
+poirot = { version = "0.2", path = "poirot" }
 
 [dev-dependencies]
 lazy_static = "1.0.0"

@@ -1,149 +1,48 @@
-#![feature(nll)]
-
 use std::sync::{RwLock};
-use std::mem;
-use std::collections::LinkedList;
 use std::hash::{Hash, BuildHasher, Hasher};
-use std::collections::hash_map::RandomState;
+use std::collections::hash_map::{HashMap, RandomState};
 use std::default::Default;
+use std::borrow::Borrow;
 
-const LOAD_FACTOR: usize = 80;
 const DEFAULT_INITIAL_CAPACITY: usize = 16;
 const DEFAULT_SEGMENT_COUNT: usize = 16;
 
-struct HashEntry<K, V> {
-    hash: u64,
-    key: K,
-    value: V,
-}
-
-struct Segment<K, V> {
-    count: usize,
-    table: Vec<LinkedList<HashEntry<K, V>>>,
-}
-
-impl<K: PartialEq + Eq, V> Segment<K, V> {
-    fn new_with_capacity(capacity: usize) -> Self {
-        let mut table = Vec::with_capacity(capacity);
-        for _ in 0..capacity {
-            table.push(LinkedList::new());
-        }
-        let count = 0;
-        Segment{
-            count,
-            table,
-        }
-    }
-    fn insert(&mut self, key: K, value: V, hash: u64) -> Option<V> {
-        let c = self.count + 1;
-        if c * 100 > self.threshold() {
-            self.expand();
-        }
-
-        let index = hash as usize & (self.table.len() - 1);
-        let slot = &mut self.table[index];
-        let entry_chain = slot.iter_mut();
-        for entry in entry_chain {
-            if entry.hash != hash {
-                continue
-            } else if entry.key != key {
-                continue
-            } else {
-                self.count = c;
-                return Some(mem::replace(&mut entry.value, value))
-            }
-        }
-        slot.push_front(HashEntry{hash, key, value});
-        None
-    }
-
-    fn get(&self, key: K, hash: u64) -> Option<&V> {
-        let index = hash as usize & (self.table.len() - 1);
-        let slot = &self.table[index];
-        let entry_chain = slot.iter();
-        for entry in entry_chain {
-            if entry.hash != hash {
-                continue
-            } else if entry.key != key {
-                continue
-            } else {
-                return Some(&entry.value)
-            }
-        }
-        None
-    }
-
-    fn contains(&self, key: K, hash: u64) -> bool {
-        let index = hash as usize & (self.table.len() - 1);
-        let slot = &self.table[index];
-        let entry_chain = slot.iter();
-        for entry in entry_chain {
-            if entry.hash != hash {
-                continue
-            } else if entry.key != key {
-                continue
-            } else {
-                return true
-            }
-        }
-        false
-    }
-
-    fn expand(&mut self) {
-        let new_len = self.table.len() << 1;
-        let mut new_table = Vec::with_capacity(new_len);
-        for _ in 0..new_len {
-            new_table.push(LinkedList::new());
-        }
-        let old_table = mem::replace(&mut self.table, new_table);
-
-        for entry in old_table.into_iter().flat_map(|ll| ll) {
-            let index = entry.hash as usize & (new_len - 1);
-            self.table[index].push_front(entry);
-        }
-    }
-
-    fn threshold(&self) -> usize {
-        self.table.len() * LOAD_FACTOR
-    }
-}
-
 pub struct ConcurrentHashMap<K, V, B: BuildHasher = RandomState> {
-    segments: Vec<RwLock<Segment<K, V>>>,
+    segments: Vec<RwLock<HashMap<K, V, B>>>,
     hash_builder: B,
 }
 
-impl<K: PartialEq + Eq + Hash, V> ConcurrentHashMap<K, V, RandomState> {
+impl<K: Eq + Hash, V> ConcurrentHashMap<K, V, RandomState> {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl<K: PartialEq + Eq + Hash, V, B: BuildHasher> ConcurrentHashMap<K, V, B> {
+impl<K: Eq + Hash, V, B: BuildHasher + Default> ConcurrentHashMap<K, V, B> {
     pub fn insert(&self, key: K, value: V) -> Option<V> {
         let hash = self.hash(&key);
         let segment_index = self.get_segment(hash);
-        self.segments[segment_index].write().unwrap().insert(key, value, hash)
+        self.segments[segment_index].write().unwrap().insert(key, value)
     }
 
-    pub fn contains(&self, key: K) -> bool {
-        let hash = self.hash(&key);
+    pub fn contains<Q: ?Sized>(&self, key: &Q) -> bool where K: Borrow<Q>, Q: Eq + Hash {
+        let hash = self.hash(key);
         let segment_index = self.get_segment(hash);
-        self.segments[segment_index].read().unwrap().contains(key, hash)
+        self.segments[segment_index].read().unwrap().contains_key(key)
     }
 
-    pub fn get(&mut self, key: K) -> Option<&V> {
-        let hash = self.hash(&key);
+    pub fn get<Q: ?Sized>(&mut self, key: &Q) -> Option<&V> where K: Borrow<Q>, Q: Eq + Hash {
+        let hash = self.hash(key);
         let segment_index = self.get_segment(hash);
-        self.segments[segment_index].get_mut().unwrap().get(key, hash)
+        self.segments[segment_index].get_mut().unwrap().get(key)
     }
 
-    pub fn with_capacity_and_hasher_and_concurrencylevel(capacity: usize, hash_builder: B, concurrency_level: usize) -> Self {
+    pub fn with_capacity_and_hasher_and_concurrency_level(capacity: usize, hash_builder: B, concurrency_level: usize) -> Self {
         let concurrency_level = concurrency_level.next_power_of_two();
         let per_segment_capacity = (capacity / concurrency_level).next_power_of_two();
         let mut segments = Vec::with_capacity(concurrency_level);
         for _ in 0..concurrency_level {
-            segments.push(RwLock::new(Segment::new_with_capacity(per_segment_capacity)))
+            segments.push(RwLock::new(HashMap::with_capacity_and_hasher(per_segment_capacity, <B as Default>::default())))
         }
         ConcurrentHashMap{
             hash_builder,
@@ -151,7 +50,7 @@ impl<K: PartialEq + Eq + Hash, V, B: BuildHasher> ConcurrentHashMap<K, V, B> {
         }
     }
 
-    fn hash(&self, key: &K) -> u64 {
+    fn hash<Q: ?Sized>(&self, key: &Q) -> u64 where K: Borrow<Q>, Q: Eq + Hash {
         let mut hasher = self.hash_builder.build_hasher();
         key.hash(&mut hasher);
         hasher.finish()
@@ -163,9 +62,9 @@ impl<K: PartialEq + Eq + Hash, V, B: BuildHasher> ConcurrentHashMap<K, V, B> {
     }
 }
 
-impl<K: PartialEq + Eq + Hash, V, B: BuildHasher + Default> Default for ConcurrentHashMap<K, V, B> {
+impl<K: Eq + Hash, V, B: BuildHasher + Default> Default for ConcurrentHashMap<K, V, B> {
     fn default() -> Self {
-        ConcurrentHashMap::with_capacity_and_hasher_and_concurrencylevel(DEFAULT_INITIAL_CAPACITY, Default::default(), DEFAULT_SEGMENT_COUNT)
+        ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(DEFAULT_INITIAL_CAPACITY, Default::default(), DEFAULT_SEGMENT_COUNT)
     }
 }
 
@@ -173,7 +72,7 @@ pub struct ConcurrentHashSet<K, B: BuildHasher = RandomState> {
     table: ConcurrentHashMap<K, (), B>,
 }
 
-impl<K: PartialEq + Eq + Hash> ConcurrentHashSet<K, RandomState> {
+impl<K: Eq + Hash> ConcurrentHashSet<K, RandomState> {
     pub fn new() -> Self {
         ConcurrentHashSet {
             table: ConcurrentHashMap::new()
@@ -182,22 +81,34 @@ impl<K: PartialEq + Eq + Hash> ConcurrentHashSet<K, RandomState> {
 
     pub fn with_capacity(capacity: usize) -> Self {
         ConcurrentHashSet{
-            table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrencylevel(capacity, Default::default(), DEFAULT_SEGMENT_COUNT)
+            table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(capacity, Default::default(), DEFAULT_SEGMENT_COUNT)
         }
     }
 }
 
-impl<K: PartialEq + Eq + Hash, B: BuildHasher> ConcurrentHashSet<K, B> {
+impl<K: Eq + Hash, B: BuildHasher + Default> ConcurrentHashSet<K, B> {
     pub fn insert(&self, key: K) -> bool {
         self.table.insert(key, ()).is_none()
     }
 
-    pub fn contains(&self, key: K) -> bool {
+    pub fn contains<Q: ?Sized>(&self, key: &Q) -> bool where K: Borrow<Q>, Q: Eq + Hash {
         self.table.contains(key)
+    }
+
+    pub fn with_capacity_and_hasher(capacity: usize, hash_builder: B) -> Self {
+        ConcurrentHashSet{
+            table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(capacity, hash_builder, DEFAULT_SEGMENT_COUNT)
+        }
+    }
+
+    pub fn with_capacity_and_hasher_and_concurrency_level(capacity: usize, hash_builder: B, concurrency_level: usize) -> Self {
+        ConcurrentHashSet{
+            table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(capacity, hash_builder, concurrency_level)
+        }        
     }
 }
 
-impl<K: PartialEq + Eq + Hash, B: BuildHasher + Default> Default for ConcurrentHashSet<K, B> {
+impl<K: Eq + Hash, B: BuildHasher + Default> Default for ConcurrentHashSet<K, B> {
     fn default() -> Self {
         ConcurrentHashSet{
             table: ConcurrentHashMap::default()

@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::hash::BuildHasherDefault;
 
 pub type Set<T> = HashSet<T, BuildHasherDefault<FxHasher>>;
-pub type ConcurrentSet<'a> = ConcurrentHashSet<&'a [u8]>;
+pub type ConcurrentSet<'a> = ConcurrentHashSet<&'a [u8], BuildHasherDefault<SeaHasher>>;
 
 #[cfg(test)]
 mod tests {
@@ -35,18 +35,18 @@ mod tests {
     }
 
     #[test]
-    fn ConcurrentSet_insert_test() {
+    fn concurrent_set_insert_test() {
         let data = vec![5u8, 100u8, 200u8];
-        let set = ConcurrentSet::new();
+        let set = ConcurrentSet::default();
         set.insert(&data[..]);
 
         assert!(set.contains(&data[..]));
     }
 
     #[test]
-    fn ConcurrentSet_realloc_test() {
+    fn concurrent_set_realloc_test() {
         let data: Vec<u8> = (0..200u8).into_iter().collect();
-        let set = ConcurrentSet::new();
+        let set = ConcurrentSet::default();
         for s in data.windows(2) {
             set.insert(s);
         }
@@ -58,9 +58,7 @@ mod tests {
 
     #[test]
     fn concurrent_inserts_test() {
- 
-        let set = Arc::new(ConcurrentSet::new());
-
+        let set = Arc::new(ConcurrentSet::default());
 
         let handle1 = Arc::clone(&set);
         let child1 = thread::spawn( move || {
@@ -92,7 +90,7 @@ mod tests {
 
     #[test]
     fn many_concurrent_inserts_test() {
-        let set = Arc::new(ConcurrentSet::new());
+        let set = Arc::new(ConcurrentSet::default());
         let mut handles = Vec::with_capacity(16);
 
         for t in 0..16 {
@@ -120,7 +118,7 @@ mod tests {
 
     #[test]
     fn rayon_filter_test() {
-        let set = ConcurrentSet::new();
+        let set = ConcurrentSet::default();
         let results: Vec<&[u8]> = DATA3.par_windows(2).filter(|s| set.insert(s)).collect();
         assert_eq!(results.len(), 100);
     }
@@ -137,14 +135,14 @@ mod tests {
                 data
             };
         }
-        let set = ConcurrentSet::new();
+        let set = ConcurrentSet::default();
         let results: Vec<&[u8]> = DATA4.par_chunks(4).filter(|s| set.insert(s)).collect();
         assert_eq!(results.len(), 1_000_000);
     }
 
     #[test]
     fn detect_duplicates_test() {
-        let set = ConcurrentSet::new();
+        let set = ConcurrentSet::default();
 
         for s in DATA1.windows(3) {
             assert!(set.insert(s));

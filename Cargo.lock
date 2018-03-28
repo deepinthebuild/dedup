@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "dedup"
-version = "0.2.0-gumshoe"
+version = "0.3.0-poirot"
 dependencies = [
  "byteorder 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -100,7 +100,7 @@ dependencies = [
  "lumpy_chunks 0.1.0",
  "memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "poirot 0.1.0",
+ "poirot 0.2.0",
  "rayon 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "seahash 3.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "poirot"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "rand"
