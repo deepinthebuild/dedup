@@ -4,7 +4,7 @@ use std::collections::hash_map::{HashMap, RandomState};
 use std::default::Default;
 use std::borrow::Borrow;
 
-const DEFAULT_INITIAL_CAPACITY: usize = 16;
+const DEFAULT_INITIAL_CAPACITY: usize = 64;
 const DEFAULT_SEGMENT_COUNT: usize = 16;
 
 pub struct ConcurrentHashMap<K, V, B: BuildHasher = RandomState> {
@@ -19,6 +19,7 @@ impl<K: Eq + Hash, V> ConcurrentHashMap<K, V, RandomState> {
 }
 
 impl<K: Eq + Hash, V, B: BuildHasher + Default> ConcurrentHashMap<K, V, B> {
+    #[inline]
     pub fn insert(&self, key: K, value: V) -> Option<V> {
         let hash = self.hash(&key);
         let segment_index = self.get_segment(hash);
@@ -57,7 +58,7 @@ impl<K: Eq + Hash, V, B: BuildHasher + Default> ConcurrentHashMap<K, V, B> {
     }
 
     fn get_segment(&self, hash: u64) -> usize {
-        let shift_size = 64 - self.segments.len().trailing_zeros();
+        let shift_size = (std::mem::size_of::<usize>() * 8) - self.segments.len().trailing_zeros() as usize;
         (hash as usize >> shift_size) & (self.segments.len() - 1)
     }
 }
@@ -84,9 +85,16 @@ impl<K: Eq + Hash> ConcurrentHashSet<K, RandomState> {
             table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(capacity, Default::default(), DEFAULT_SEGMENT_COUNT)
         }
     }
+
+    pub fn with_capacity_and_concurrency_level(capacity: usize, concurrency_level: usize) -> Self {
+        ConcurrentHashSet{
+            table: ConcurrentHashMap::with_capacity_and_hasher_and_concurrency_level(capacity, Default::default(), concurrency_level)
+        }        
+    }
 }
 
 impl<K: Eq + Hash, B: BuildHasher + Default> ConcurrentHashSet<K, B> {
+    #[inline]
     pub fn insert(&self, key: K) -> bool {
         self.table.insert(key, ()).is_none()
     }
