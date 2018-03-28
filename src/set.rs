@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn rayon_filter_test() {
         let set = ConcurrentSet::<&'static [u8]>::default();
-        let results: Vec<&[u8]> = DATA3.par_windows(2).filter(|s| set.insert(&s)).collect();
+        let results: Vec<&[u8]> = DATA3.par_windows(2).filter(|s| set.insert(s)).collect();
         assert_eq!(results.len(), 100);
     }
 
