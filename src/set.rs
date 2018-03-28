@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::hash::BuildHasherDefault;
 
 pub type Set<T> = HashSet<T, BuildHasherDefault<FxHasher>>;
-pub type ConcurrentSet<'a> = ConcurrentHashSet<&'a [u8], BuildHasherDefault<SeaHasher>>;
+pub type ConcurrentSet<T> = ConcurrentHashSet<T>;
 
 #[cfg(test)]
 mod tests {
