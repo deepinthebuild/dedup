@@ -2,6 +2,13 @@
 name = "dedup"
 version = "0.2.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
+homepage = "https://github.com/cjm00/dedup"
+categories = ["text-processing", "command-line-utilities"]
+keywords = ["unique", "dedup"]
+license = "MIT OR Apache-2.0"
+description = """
+A blazingly fast command-line text deduplicator.
+"""
 
 [badges]
 travis-ci = { repository = "cjm00/dedup" }
