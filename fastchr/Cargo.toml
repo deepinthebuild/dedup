@@ -2,8 +2,9 @@
 name = "fastchr"
 version = "0.2.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
+repository = "https://github.com/cjm00/dedup"
 description = "Faster memchr using SIMD intrinsics"
-license = "Apache-2.0/MIT"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 faster = "0.4.3"

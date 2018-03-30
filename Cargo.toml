@@ -2,6 +2,7 @@
 name = "dedup"
 version = "0.2.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
+repository = "https://github.com/cjm00/dedup"
 homepage = "https://github.com/cjm00/dedup"
 categories = ["text-processing", "command-line-utilities"]
 keywords = ["unique", "dedup"]
