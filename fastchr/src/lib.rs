@@ -135,7 +135,7 @@ unsafe fn avx_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     let ptr = haystack.as_ptr() as usize;
 
     // align ptr to 32 bytes
-    while (ptr + index) % 32 != 0 {
+    while (ptr + index) % 32 != 0 && index < haystack.len() {
         if needle == *haystack.get_unchecked(index) {
             return Some(index)
         } else {
