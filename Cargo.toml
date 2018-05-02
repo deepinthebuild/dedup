@@ -20,7 +20,7 @@ memchr = "~2"
 memmap = "~0.6.2"
 clap = { version = "~2.30", features = ["yaml"] }
 fxhash = "0.2.1"
-fastchr = { version = "0.2", path = "./fastchr", optional = true }
+fastchr = { version = "0.3", path = "fastchr"}
 
 [profile.release]
 opt-level = 3
@@ -33,8 +33,6 @@ path = "src/main.rs"
 name = "dedup"
 
 [features]
-default = ["simd-accel"]
-simd-accel = ["fastchr"]
 
 [workspace]
 members = ["fastchr"]

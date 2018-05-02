@@ -1,7 +1,4 @@
-#[cfg(not(feature = "simd-accel"))]
-use memchr::memchr;
-#[cfg(feature = "simd-accel")]
-use fastchr::fastchr as memchr;
+use fastchr::fastchr;
 
 use args::Options;
 use error::DedupError;
@@ -33,7 +30,7 @@ impl<'a, W: io::Write + 'a> BufferDeduper<'a, W> {
     pub fn run(mut self) -> Result<u64, DedupError> {
         let delim = self.opts.delim;
         let mut count: u64 = 0;
-        while let Some(u) = memchr(delim, self.buffer) {
+        while let Some(u) = fastchr(delim, self.buffer) {
             let (mut ele, rest) = self.buffer.split_at(u + 1);
             if self.dup_store.insert(ele) {
                 self.out.write_all(ele)?;

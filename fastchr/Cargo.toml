@@ -1,13 +1,10 @@
 [package]
 name = "fastchr"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 repository = "https://github.com/cjm00/dedup"
 description = "Faster memchr using SIMD intrinsics"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-faster = "0.4.3"
-
-[dev-dependencies]
 memchr = "2.0.1"
