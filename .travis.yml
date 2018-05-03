@@ -4,8 +4,8 @@ env:
   global:
     - CRATE_NAME=dedup
     - RUST_BACKTRACE: full
-    - CC_x86_64-unknown-linux-musl: x86_64-linux-musl-gcc
-    - CC_i686-unknown-linux-musl: i686-linux-musl-gcc
+    - CC_x86_64_unknown_linux_musl: x86_64-linux-musl-gcc
+    - CC_i686_unknown_linux_musl: i686-linux-musl-gcc
 
 matrix:
   fast_finish: true
@@ -25,6 +25,7 @@ matrix:
 
 before_install:
   - rustup self update
+  - sudo apt-get install musl-tools
 
 install:
   - sh ci/install.sh
