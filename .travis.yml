@@ -22,6 +22,9 @@ matrix:
       os: osx
       rust: nightly
 
+  allow_failures:
+    - env: TARGET=i686-unknown-linux-musl
+
 
 before_install:
   - rustup self update
