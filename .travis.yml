@@ -25,7 +25,7 @@ matrix:
 
 before_install:
   - rustup self update
-  - if [ $TRASVIS_OS_NAME = linux ]; then sudo apt-get install musl-tools; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install musl-tools; fi
 
 install:
   - sh ci/install.sh
