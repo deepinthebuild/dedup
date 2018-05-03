@@ -8,3 +8,12 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 memchr = "2.0.1"
+
+[dev-dependencies]
+quickcheck = "^0.6"
+criterion = { version = "^0.2", default-features = false }
+lazy_static = "1"
+
+[[bench]]
+name = "benches"
+harness = false

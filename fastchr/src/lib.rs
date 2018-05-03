@@ -1,4 +1,10 @@
-#![feature(test, stdsimd)]
+//! This crate needs docs!
+#![warn(missing_docs)]
+#![feature(stdsimd)]
+
+#[macro_use]
+#[cfg(test)]
+extern crate quickcheck;
 
 extern crate memchr;
 
@@ -6,11 +12,16 @@ use memchr::memchr;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 
 use std::mem;
+use std::iter::FusedIterator;
 
+/// An iterator for byte positions using fastchr.
+/// 
+/// This struct is created by [`Fastchr::new`].
 #[derive(Debug, Clone)]
 pub struct Fastchr<'a> {
     needle: u8,
@@ -19,7 +30,22 @@ pub struct Fastchr<'a> {
 }
 
 impl<'a> Fastchr<'a> {
-    pub fn new(needle: u8, haystack: &'a [u8]) -> Self {
+    /// Creates a new iterator that yields all positions of needle in haystack.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use fastchr::Fastchr;
+    /// 
+    /// let slice = [100, 50, 70, 50, 100, 100, 50];
+    /// let mut iter = Fastchr::new(50, &slice[..]);
+    /// 
+    /// assert_eq!(iter.next().unwrap(), 1);
+    /// assert_eq!(iter.next().unwrap(), 3);
+    /// assert_eq!(iter.next().unwrap(), 6);
+    /// assert!(iter.next().is_none());
+    /// ```
+    pub fn new(needle: u8, haystack: &[u8]) -> Fastchr {
         Fastchr{
             needle,
             haystack,
@@ -40,36 +66,90 @@ impl<'a> Iterator for Fastchr<'a> {
             }
         )
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.haystack.len()))
+    }
 }
 
+impl<'a> FusedIterator for Fastchr<'a> {}
+
+/// An iterator of subslices separated by a specified byte. The separator byte is not included in the subslices.
+/// 
+/// This struct is created by [`FastchrSplit::new`]
 #[derive(Debug, Clone)]
 pub struct FastchrSplit<'a> {
     needle: u8,
     haystack: &'a [u8],
+    finished: bool,
 }
 
 impl<'a> FastchrSplit<'a> {
-    pub fn new(needle: u8, haystack: &'a [u8]) -> Self {
+    /// Returns an iterator over subslices of `haystack` separated by `needle`. `needle` is not contained in the subslices.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use fastchr::FastchrSplit;
+    /// 
+    /// let slice = [10, 40, 33, 20];
+    /// let mut iter = FastchrSplit::new(40, &slice[..]);
+    /// 
+    /// assert_eq!(iter.next().unwrap(), &[10]);
+    /// assert_eq!(iter.next().unwrap(), &[33, 20]);
+    /// assert!(iter.next().is_none());
+    /// ```
+    /// 
+    /// ```
+    /// use fastchr::FastchrSplit;
+    /// 
+    /// let slice = [100, 50, 70, 50, 100, 100, 50];
+    /// let mut iter = FastchrSplit::new(50, &slice[..]);
+    /// 
+    /// assert_eq!(iter.next().unwrap(), &[100]);
+    /// assert_eq!(iter.next().unwrap(), &[70]);
+    /// assert_eq!(iter.next().unwrap(), &[100, 100]);
+    /// assert_eq!(iter.next().unwrap(), &[]);
+    /// assert!(iter.next().is_none());
+    /// ```
+    pub fn new(needle: u8, haystack: &[u8]) -> FastchrSplit {
         FastchrSplit{
             needle,
             haystack,
+            finished: false,
         }
     }
 }
 
 impl<'a> Iterator for FastchrSplit<'a> {
     type Item = &'a [u8];
-    fn next(&mut self) -> Option<Self::Item> {
-        fastchr(self.needle, self.haystack).map(
-            move |new_index| {
-                let (split, haystack) = self.haystack.split_at(new_index + 1);
-                self.haystack = haystack;
-                split
+    fn next(&mut self) -> Option<Self::Item> {   
+        if self.finished {
+            None
+        } else {
+            match fastchr(self.needle, self.haystack) {
+                None => {
+                    self.finished = true;
+                    Some(mem::replace(&mut self.haystack, &[]))},
+                Some(i) => {
+                    let out = Some(&self.haystack[..i]);
+                    self.haystack = &self.haystack[i + 1..];
+                    out
+                }
             }
-        )
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.finished {
+            (0, Some(0))
+        } else {
+            (1, Some(self.haystack.len() + 1))
+        }
     }
 }
 
+impl<'a> FusedIterator for FastchrSplit<'a> {}
 
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
 #[inline]
@@ -170,12 +250,7 @@ unsafe fn avx_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    extern crate test;
-
-    use self::test::Bencher;
-
     use super::*;
-
     use std::iter;
 
     const LONG_PREFIX_LEN: usize = 500000;
@@ -270,16 +345,9 @@ mod tests {
         assert_eq!(None, fastchr(NEEDLE, &data));
     }
 
-    #[bench]
-    fn fastchr_bench(b: &mut Bencher) {
-        let data = generate_long_sample();
-        b.iter(|| fastchr(NEEDLE, &data));
+    quickcheck!{
+        fn qc_memchr_equivalence(needle: u8, haystack: Vec<u8>) -> bool {
+            fastchr(needle, &haystack) == memchr(needle, &haystack)
+        }
     }
-
-    #[bench]
-    fn memchr_bench(b: &mut Bencher) {
-        let data = generate_long_sample();
-        b.iter(|| memchr(NEEDLE, &data));
-    }
-
 }
