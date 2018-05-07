@@ -1,4 +1,7 @@
-//! This crate needs docs!
+//! This crate provides one function: `fastchr`, which very quickly finds the first occurrence of a given byte in a slice.
+//! `fastchr` is implemented using SIMD intrinsics and runtime CPU feature detection so it will always use the fastest method available
+//! on a platform. If SIMD features are not available, `fastchr` falls back to using `memchr`.
+
 #![warn(missing_docs)]
 #![feature(stdsimd)]
 
@@ -19,7 +22,7 @@ use std::arch::x86::*;
 use std::mem;
 use std::iter::FusedIterator;
 
-/// An iterator for byte positions using fastchr.
+/// An iterator for byte positions using `fastchr`.
 /// 
 /// This struct is created by [`Fastchr::new`].
 #[derive(Debug, Clone)]
@@ -157,6 +160,21 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     memchr(needle, haystack)
 }
 
+/// Returns the index corresponding to the first occurrence of `needle` in `haystack`, or `None` if one is not found.
+/// 
+/// `fastchr` is implemented using SIMD intrinsics and run-time CPU feature detection, so it is often faster than `memchr`
+/// due to being able to take advantage of available SIMD features at run-time.
+/// 
+/// # Example
+/// 
+/// ```
+/// use fastchr::fastchr;
+/// 
+/// let haystack = b"the quick brown fox jumps over the lazy dog";
+/// assert_eq!(fastchr(b'k', haystack), Some(8));
+/// assert_eq!(fastchr(b'o', haystack), Some(12));
+/// assert_eq!(fastchr(b'!', haystack), None);
+/// ```
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[inline]
 pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
