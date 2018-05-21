@@ -29,9 +29,6 @@ crossbeam-utils = "^0.4"
 crossbeam-deque = "^0.3"
 num_cpus = "~1"
 
-[patch.crates-io]
-crossbeam-utils = { git = "https://github.com/cjm00/crossbeam-utils" }
-
 [profile.release]
 opt-level = 3
 codegen-units = 1
