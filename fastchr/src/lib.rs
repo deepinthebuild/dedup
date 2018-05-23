@@ -77,25 +77,11 @@ impl<'a> Fastchr<'a> {
     #[target_feature(enable = "avx2")]
     unsafe fn avx_read_to_mask(&mut self) {
         let needle = self.needle as i8;
-        let mut read_size = 0;
         let ptr = self.haystack.as_ptr() as usize;
-
-        while (ptr + self.position + read_size) % AVX_LANE_WIDTH != 0 && self.position + read_size < self.haystack.len() {
-            if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
-                self.detect_mask |= 1 << read_size;
-            }
-            read_size += 1;
-        }
-
-        if read_size > 0 {
-            self.position += read_size;
-            self.read_size = read_size as u8;
-            return
-        }
 
         let wide_needle = _mm256_set1_epi8(needle);
         while self.position + AVX_LANE_WIDTH <= self.haystack.len() {
-            let hay = _mm256_load_si256((ptr + self.position) as *const __m256i);
+            let hay = _mm256_loadu_si256((ptr + self.position) as *const __m256i);
             let hay_cmp = _mm256_cmpeq_epi8(hay, wide_needle);
             let hay_cmp_mask = _mm256_movemask_epi8(hay_cmp) as u64;
             if hay_cmp_mask > 0 {
@@ -107,15 +93,15 @@ impl<'a> Fastchr<'a> {
             self.position += AVX_LANE_WIDTH
         }
 
-        let mut read_size = 0;
-        while self.position + read_size < self.haystack.len() {
-            if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
-                self.detect_mask |= 1 << read_size;
+        let mut end_read_size = 0;
+        while self.position + end_read_size < self.haystack.len() {
+            if needle == *self.haystack.get_unchecked(self.position + end_read_size) as i8 {
+                self.detect_mask |= 1 << end_read_size;
             }
-            read_size += 1;
+            end_read_size += 1;
         }
-        self.position += read_size;
-        self.read_size = read_size as u8;
+        self.position += end_read_size;
+        self.read_size = end_read_size as u8;
     }
 
     #[inline]
