@@ -2,6 +2,7 @@
 environment:
   global:
     CRATE_NAME: dedup
+    RUST_BACKTRACE: full
 
   matrix:
     - TARGET: i686-pc-windows-gnu
