@@ -107,14 +107,24 @@ fn empty_find_test() {
 fn memchr_iter_count_equivalence() {
     let random_data: Vec<u8> = 
         ChaChaRng::new_unseeded().gen_iter().take(LONG_PREFIX_LEN * 2).collect();
-    assert_eq!(Memchr::new(NEEDLE, &random_data).count(), Fastchr::new(NEEDLE, &random_data).count())
+    assert_eq!(Memchr::new(NEEDLE, &random_data).count(), Fastchr::new(NEEDLE, &random_data).count(), "{}", identify_simd_feature_used())
 }
 
 #[test]
 fn memchr_dense_iter_count_equivalence() {
     let dense_data: Vec<u8> = 
         iter::repeat(NEEDLE).take(ODD_PREFIX_LEN).collect();
-    assert_eq!(Memchr::new(NEEDLE, &dense_data).count(), Fastchr::new(NEEDLE, &dense_data).count())
+    assert_eq!(Memchr::new(NEEDLE, &dense_data).count(), Fastchr::new(NEEDLE, &dense_data).count(), "{}", identify_simd_feature_used())
+}
+
+fn identify_simd_feature_used() -> &'static str {
+    if is_x86_feature_detected!("avx2") {
+        "AVX"
+    } else if is_x86_feature_detected!("sse2") {
+        "SSE"
+    } else {
+        "fallback"
+    }
 }
 
 quickcheck!{
