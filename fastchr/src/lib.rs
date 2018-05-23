@@ -152,8 +152,9 @@ impl<'a> Fastchr<'a> {
 
     fn fallback_read_to_mask(&mut self) {
         if let Some(u) = memchr(self.needle, &self.haystack[self.position..]) {
-            self.position += u;
+            self.position += u + 1;
             self.read_size = 1;
+            self.detect_mask = 1;
         } else {
             self.position = self.haystack.len();
         }
