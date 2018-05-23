@@ -18,7 +18,7 @@ appveyor = { repository = "cjm00/dedup" }
 [dependencies]
 memchr = "~2"
 memmap = "~0.6.2"
-clap = { version = "~2.30", features = ["yaml"] }
+clap = { version = "~2.31", features = ["yaml"] }
 fxhash = "0.2.1"
 fastchr = { version = "0.4", path = "fastchr"}
 
