@@ -17,7 +17,7 @@ environment:
       CHANNEL: nightly
 
 matrix:
-  fast_finish: true
+  fast_finish: false
 
 
 install:
