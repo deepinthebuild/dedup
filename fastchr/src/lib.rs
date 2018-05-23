@@ -5,10 +5,6 @@
 #![warn(missing_docs)]
 #![feature(stdsimd)]
 
-#[macro_use]
-#[cfg(test)]
-extern crate quickcheck;
-
 extern crate memchr;
 
 use memchr::memchr;
@@ -22,6 +18,9 @@ use std::arch::x86::*;
 use std::mem;
 use std::iter::FusedIterator;
 
+const AVX_LANE_WIDTH: usize = 32;
+const SSE_LANE_WIDTH: usize = 16;
+
 /// An iterator for byte positions using `fastchr`.
 /// 
 /// This struct is created by [`Fastchr::new`].
@@ -30,6 +29,10 @@ pub struct Fastchr<'a> {
     needle: u8,
     haystack: &'a [u8],
     position: usize,
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    read_size: u8,
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    detect_mask: u64,
 }
 
 impl<'a> Fastchr<'a> {
@@ -53,21 +56,142 @@ impl<'a> Fastchr<'a> {
             needle,
             haystack,
             position: 0,
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            read_size: 0,
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            detect_mask: 0,
+        }
+    }
+
+    fn read_to_mask(&mut self) {
+        if is_x86_feature_detected!("avx2") {
+            unsafe { self.avx_read_to_mask() }
+        } else if is_x86_feature_detected!("sse2") {
+            unsafe { self.sse_read_to_mask() }
+        } else {
+            self.fallback_read_to_mask()
+        }
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn avx_read_to_mask(&mut self) {
+        let needle = self.needle as i8;
+        let mut read_size = 0;
+        let ptr = self.haystack.as_ptr() as usize;
+
+        while (ptr + read_size) % AVX_LANE_WIDTH != 0 && self.position + read_size < self.haystack.len() {
+            if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
+                self.detect_mask |= 1 << read_size;
+            }
+            read_size += 1;
+        }
+
+        if read_size > 0 {
+            self.position += read_size;
+            self.read_size = read_size as u8;
+            return
+        }
+
+        let wide_needle = _mm256_set1_epi8(needle);
+        while self.position + AVX_LANE_WIDTH <= self.haystack.len() {
+            let hay = _mm256_load_si256((ptr + self.position) as *const __m256i);
+            let hay_cmp = _mm256_cmpeq_epi8(hay, wide_needle);
+            let hay_cmp_mask = _mm256_movemask_epi8(hay_cmp) as u64;
+            if hay_cmp_mask > 0 {
+                self.read_size = AVX_LANE_WIDTH as u8;
+                self.position += AVX_LANE_WIDTH;
+                self.detect_mask = hay_cmp_mask;
+                return
+            }
+            self.position += AVX_LANE_WIDTH
+        }
+
+        let mut read_size = 0;
+        while self.position + read_size < self.haystack.len() {
+            if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
+                self.detect_mask |= 1 << read_size;
+            }
+            read_size += 1;
+        }
+        self.position += read_size;
+        self.read_size = read_size as u8;
+    }
+
+    #[inline]
+    #[target_feature(enable = "sse2")]
+    unsafe fn sse_read_to_mask(&mut self) {
+        let needle = self.needle as i8;
+        let ptr = self.haystack.as_ptr() as usize;
+
+        let wide_needle = _mm_set1_epi8(needle);
+
+        while self.position + SSE_LANE_WIDTH <= self.haystack.len() {
+            let hay = _mm_loadu_si128((ptr + self.position) as *const __m128i);
+            let hay_cmp = _mm_cmpeq_epi8(hay, wide_needle);
+            let hay_cmp_mask = _mm_movemask_epi8(hay_cmp) as u64;
+            if hay_cmp_mask > 0 {
+                self.read_size = SSE_LANE_WIDTH as u8;
+                self.position += SSE_LANE_WIDTH;
+                self.detect_mask = hay_cmp_mask;
+                return
+            }
+            self.position += SSE_LANE_WIDTH;
+        }
+
+        let mut read_size = 0;
+        while self.position + read_size < self.haystack.len() {
+            if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
+                self.detect_mask |= 1 << read_size;
+            }
+            read_size += 1;
+        }
+        self.position += read_size;
+        self.read_size = read_size as u8;
+    }
+
+    fn fallback_read_to_mask(&mut self) {
+        if let Some(u) = memchr(self.needle, &self.haystack[self.position..]) {
+            self.position += u;
+            self.read_size = 1;
+        } else {
+            self.position = self.haystack.len();
         }
     }
 }
 
 impl<'a> Iterator for Fastchr<'a> {
     type Item = usize;
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        fastchr(self.needle, self.haystack).map(
-            move |new_index| {
-                self.haystack = self.haystack.split_at(new_index + 1).1;
-                let found_pos = self.position + new_index;
-                self.position = found_pos + 1;
-                found_pos
-            }
-        )
+        if self.detect_mask > 0 {
+            // mask_pos is the index (starting from 0) of the lowest set bit
+            let mask_pos = self.detect_mask.trailing_zeros() as usize;
+            // This clears the lowest set bit in the mask
+            self.detect_mask &= self.detect_mask - 1;
+            Some(mask_pos + self.position - self.read_size as usize)
+        } else if self.position >= self.haystack.len() {
+            None
+        } else {
+            self.read_to_mask();
+            self.next()
+        }
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(x) = fastchr(self.needle, self.haystack) {
+            self.haystack = self.haystack.split_at(x + 1).1;
+            let found_pos = self.position + new_index;
+            self.position = found_pos + 1;
+            Some(found_pos)
+        } else {
+            self.haystack = &[];
+            None
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -190,29 +314,27 @@ pub fn fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 #[inline]
 #[target_feature(enable = "sse2")]
 unsafe fn sse_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    const LANE_WIDTH: usize = 16;
 
     let needle = needle as i8;
-    let haystack: &[i8] = mem::transmute(haystack);
     let ptr = haystack.as_ptr() as usize;
     let mut index: usize = 0;
 
     // Read a 16 byte lane at a time and check if any bytes are equal to the needle.
     let wide_needle = _mm_set1_epi8(needle);
 
-    while index + LANE_WIDTH < haystack.len() {
+    while index + SSE_LANE_WIDTH <= haystack.len() {
         let hay = _mm_loadu_si128((ptr + index) as *const __m128i);
         let hay_cmp = _mm_cmpeq_epi8(hay, wide_needle);
         let hay_cmp_mask = _mm_movemask_epi8(hay_cmp) as usize;
         if hay_cmp_mask != 0 {
             return Some(index + hay_cmp_mask.trailing_zeros() as usize)
         }
-        index += LANE_WIDTH;
+        index += SSE_LANE_WIDTH;
     }
     
     // If there are bytes left over that don't fill a SIMD register, search them individually.
     while index < haystack.len() {
-        if needle == *haystack.get_unchecked(index) {
+        if needle == *haystack.get_unchecked(index) as i8 {
             return Some(index)
         } else {
             index += 1;
@@ -225,16 +347,14 @@ unsafe fn sse_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 #[inline]
 #[target_feature(enable = "avx2")]
 unsafe fn avx_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    const LANE_WIDTH: usize = 32;
 
     let needle = needle as i8;
-    let haystack: &[i8] = mem::transmute(haystack);
     let mut index = 0;
     let ptr = haystack.as_ptr() as usize;
 
     // align ptr to 32 bytes
-    while (ptr + index) % 32 != 0 && index < haystack.len() {
-        if needle == *haystack.get_unchecked(index) {
+    while (ptr + index) % AVX_LANE_WIDTH != 0 && index < haystack.len() {
+        if needle == *haystack.get_unchecked(index) as i8 {
             return Some(index)
         } else {
             index += 1;
@@ -244,19 +364,19 @@ unsafe fn avx_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     // Read a 32 byte lane at a time and check if any are equal to the needle.
     let wide_needle = _mm256_set1_epi8(needle);
 
-    while index + LANE_WIDTH < haystack.len() {
+    while index + AVX_LANE_WIDTH <= haystack.len() {
         let hay = _mm256_load_si256((ptr + index) as *const __m256i);
         let hay_cmp = _mm256_cmpeq_epi8(hay, wide_needle);
-        let hay_cmp_mask = _mm256_movemask_epi8(hay_cmp) as usize;
-        if hay_cmp_mask != 0 {
+        let hay_cmp_mask = _mm256_movemask_epi8(hay_cmp) as u32;
+        if hay_cmp_mask > 0 {
             return Some(index + hay_cmp_mask.trailing_zeros() as usize)
         }
-        index += LANE_WIDTH;
+        index += AVX_LANE_WIDTH;
     }
     
     // If there are bytes left over that don't fill a SIMD register, search them individually.
     while index < haystack.len() {
-        if needle == *haystack.get_unchecked(index) {
+        if needle == *haystack.get_unchecked(index) as i8 {
             return Some(index)
         } else {
             index += 1;
@@ -264,108 +384,4 @@ unsafe fn avx_fastchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     }
 
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::iter;
-
-    const LONG_PREFIX_LEN: usize = 500000;
-    const SHORT_PREFIX_LEN: usize = 16 * 2 - 1;
-    const ODD_PREFIX_LEN: usize = 50003;
-    const BURIED_SAMPLE_LEN: usize = 241;
-    const NEEDLE: u8 = 70;
-
-    fn generate_long_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(LONG_PREFIX_LEN)
-            .chain(iter::once(NEEDLE))
-            .chain(iter::repeat(200u8).take(ODD_PREFIX_LEN))
-            .collect()
-    }
-
-    fn generate_short_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(SHORT_PREFIX_LEN)
-            .chain(iter::once(NEEDLE))
-            .collect()
-    }
-
-    fn generate_odd_sample() -> Vec<u8> {
-            iter::repeat(14u8).take(ODD_PREFIX_LEN)
-            .chain(iter::once(NEEDLE))
-            .collect()
-    }
-    fn generate_long_negative_sample() -> Vec<u8> {
-        iter::repeat(231).take(ODD_PREFIX_LEN)
-        .collect()
-    }
-
-    fn generate_buried_sample() -> Vec<u8> {
-        iter::repeat(231u8).take(BURIED_SAMPLE_LEN)
-        .chain(iter::once(NEEDLE))
-        .chain(iter::repeat(231u8).take(3))
-        .chain(iter::once(NEEDLE))
-        .chain(iter::repeat(231u8).take(ODD_PREFIX_LEN))
-        .collect()
-    }
-
-    #[test]
-    fn buried_sample_test() {
-        let data = generate_buried_sample();
-        assert_eq!(Some(BURIED_SAMPLE_LEN), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn negative_sample_test() {
-        let data = generate_long_negative_sample();
-        assert_eq!(None, fastchr(NEEDLE, &data));
-    }
-    
-    #[test]
-    fn qbf_test() {
-        let haystack = b"the quick brown fox";
-        assert_eq!(Some(8), fastchr(b'k', haystack));
-    }
-
-    #[test]
-    fn memchr_odd_compat_test() {
-        let data = generate_odd_sample();
-        assert_eq!(memchr(NEEDLE, &data), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn memchr_short_compat_test() {
-        let data = generate_short_sample();
-        assert_eq!(memchr(NEEDLE, &data), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn long_find_test() {
-        let data = generate_long_sample();
-        assert_eq!(Some(LONG_PREFIX_LEN), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn short_find_test() {
-        let data = generate_short_sample();
-        assert_eq!(Some(SHORT_PREFIX_LEN), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn odd_find_test() {
-        let data = generate_odd_sample();
-        assert_eq!(Some(ODD_PREFIX_LEN), fastchr(NEEDLE, &data));
-    }
-
-    #[test]
-    fn empty_find_test() {
-        let data = Vec::new();
-        assert_eq!(None, fastchr(NEEDLE, &data));
-    }
-
-    quickcheck!{
-        fn qc_memchr_equivalence(needle: u8, haystack: Vec<u8>) -> bool {
-            fastchr(needle, &haystack) == memchr(needle, &haystack)
-        }
-    }
 }

@@ -1,18 +1,19 @@
 [package]
 name = "fastchr"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Chris McDonald <mail.chris.mcdonald@gmail.com>"]
 repository = "https://github.com/cjm00/dedup"
 description = "Faster memchr using SIMD intrinsics"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-memchr = "2.0.1"
+memchr = "^2"
 
 [dev-dependencies]
-quickcheck = "^0.6"
-criterion = { version = "^0.2", default-features = false }
-lazy_static = "1"
+quickcheck = { version = "~0.6" }
+criterion = { version = "~0.2", default-features = false }
+lazy_static = "^1"
+rand = "0.4.2"
 
 [[bench]]
 name = "benches"
