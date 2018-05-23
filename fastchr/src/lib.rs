@@ -80,7 +80,7 @@ impl<'a> Fastchr<'a> {
         let mut read_size = 0;
         let ptr = self.haystack.as_ptr() as usize;
 
-        while (ptr + read_size) % AVX_LANE_WIDTH != 0 && self.position + read_size < self.haystack.len() {
+        while (ptr + self.position + read_size) % AVX_LANE_WIDTH != 0 && self.position + read_size < self.haystack.len() {
             if needle == *self.haystack.get_unchecked(self.position + read_size) as i8 {
                 self.detect_mask |= 1 << read_size;
             }
